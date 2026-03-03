@@ -1,0 +1,2787 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HashCrack Panel v3</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+    --bg-0: #06060a; --bg-1: #0c0c14; --bg-2: #12121e; --bg-3: #1a1a2e;
+    --border: #252540; --border-h: #3a3a5a;
+    --text: #d4d4e8; --text-dim: #6a6a8a; --text-muted: #444466;
+    --accent: #00d4ff; --accent-dim: #0099bb;
+    --green: #50fa7b; --green-dim: #1a3a1a;
+    --red: #ff5555; --red-dim: #3a1a1a;
+    --yellow: #f1fa8c; --yellow-dim: #3a3a1a;
+    --orange: #ffb86c; --purple: #bd93f9;
+    --radius: 10px; --radius-sm: 6px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg-0); color: var(--text); min-height: 100vh; display: flex; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-1); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::selection { background: var(--accent); color: #000; }
+button { font-family: inherit; }
+
+/* ═══ SIDEBAR ═══ */
+.sidebar {
+    width: 220px; min-height: 100vh; background: var(--bg-1);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 100;
+}
+.sidebar-logo {
+    padding: 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+}
+.sidebar-logo .icon { font-size: 22px; }
+.sidebar-logo h1 { font-size: 16px; color: var(--accent); font-weight: 700; letter-spacing: 0.5px; }
+.sidebar-nav { flex: 1; padding: 10px 8px; }
+.nav-section { margin-bottom: 16px; }
+.nav-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); padding: 8px 12px 4px; }
+.nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 14px; border-radius: var(--radius-sm); cursor: pointer;
+    color: var(--text-dim); font-size: 13px; font-weight: 500;
+    transition: all 0.15s; margin-bottom: 2px; user-select: none;
+}
+.nav-item:hover { background: var(--bg-3); color: var(--text); }
+.nav-item.active { background: rgba(0,212,255,0.1); color: var(--accent); }
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-item .badge {
+    margin-left: auto; background: var(--red); color: #fff;
+    font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700;
+}
+.sidebar-footer {
+    padding: 14px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-muted);
+}
+.sidebar-footer .credit-val { color: var(--green); font-size: 18px; font-weight: 700; display: block; margin: 4px 0; }
+.sidebar-footer .burn { color: var(--orange); font-size: 12px; }
+
+/* ═══ MAIN ═══ */
+.main { margin-left: 220px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── Top bar ── */
+.topbar {
+    background: var(--bg-1); border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+}
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.topbar h2 { font-size: 16px; color: var(--text); font-weight: 600; }
+.phase-pill {
+    font-size: 12px; padding: 4px 12px; border-radius: 20px;
+    font-weight: 600; background: var(--bg-3); color: var(--text-dim);
+}
+.phase-pill.running { background: rgba(80,250,123,0.15); color: var(--green); }
+.phase-pill.error { background: rgba(255,85,85,0.15); color: var(--red); }
+.phase-pill.renting, .phase-pill.booting, .phase-pill.deploying { background: rgba(255,184,108,0.15); color: var(--orange); }
+.phase-pill.done { background: rgba(0,212,255,0.15); color: var(--accent); }
+
+.topbar-right { display: flex; gap: 8px; }
+.topbar-btn {
+    background: var(--bg-3); border: 1px solid var(--border);
+    color: var(--text-dim); padding: 7px 14px; border-radius: var(--radius-sm);
+    font-size: 12px; cursor: pointer; transition: all 0.15s; font-weight: 500;
+}
+.topbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+.topbar-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+/* ═══ CONTENT ═══ */
+.content { flex: 1; padding: 20px 24px; overflow-y: auto; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── Cards grid ── */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px; position: relative; overflow: hidden;
+}
+.card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+}
+.card.green::before { background: linear-gradient(90deg, var(--green), transparent); }
+.card.orange::before { background: linear-gradient(90deg, var(--orange), transparent); }
+.card.red::before { background: linear-gradient(90deg, var(--red), transparent); }
+.card.purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
+.card-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.card-value { font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1.1; }
+.card.green .card-value { color: var(--green); }
+.card.orange .card-value { color: var(--orange); }
+.card.red .card-value { color: var(--red); }
+.card.purple .card-value { color: var(--purple); }
+.card-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+/* ── Panel ── */
+.panel {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 16px; overflow: hidden;
+}
+.panel-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+}
+.panel-header h3 { font-size: 14px; color: var(--text); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.panel-body { padding: 16px 18px; }
+.panel-body.nopad { padding: 0; }
+
+/* ── Table ── */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 10px 14px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); font-weight: 600; background: var(--bg-1); position: sticky; top: 0; }
+td { padding: 10px 14px; border-bottom: 1px solid rgba(37,37,64,0.5); font-size: 13px; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ── Badges ── */
+.badge-s { padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-running { background: var(--green-dim); color: var(--green); }
+.badge-done { background: rgba(0,212,255,0.1); color: var(--accent); }
+.badge-loading, .badge-rented, .badge-booting, .badge-connecting, .badge-ready, .badge-deploying { background: var(--yellow-dim); color: var(--orange); }
+.badge-error, .badge-err { background: var(--red-dim); color: var(--red); }
+.badge-stopped { background: var(--red-dim); color: var(--red); }
+
+/* ── Progress bar ── */
+.pbar { width: 100%; height: 6px; background: var(--bg-0); border-radius: 3px; overflow: hidden; }
+.pbar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 3px; transition: width 0.6s ease; min-width: 0; }
+
+/* ── Forms ── */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.form-group input, .form-group select, .form-group textarea {
+    background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.15s;
+    font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+.form-group select option { background: var(--bg-1); }
+
+.btn {
+    padding: 10px 22px; border: none; border-radius: var(--radius-sm);
+    cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-dim)); color: #000; }
+.btn-primary:hover { box-shadow: 0 0 20px rgba(0,212,255,0.3); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-danger { background: linear-gradient(135deg, var(--red), #cc3333); color: #fff; }
+.btn-danger:hover { box-shadow: 0 0 20px rgba(255,85,85,0.3); }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 5px 12px; font-size: 11px; }
+
+/* ── Log panel ── */
+.log-container {
+    background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    max-height: 400px; overflow-y: auto; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px;
+}
+.log-entry { padding: 3px 12px; border-bottom: 1px solid rgba(37,37,64,0.3); display: flex; gap: 8px; }
+.log-entry:hover { background: rgba(255,255,255,0.02); }
+.log-time { color: var(--text-muted); min-width: 65px; }
+.log-msg { color: var(--text-dim); word-break: break-all; }
+.log-entry.error .log-msg { color: var(--red); }
+.log-entry.info .log-msg { color: var(--text-dim); }
+.log-entry.ok .log-msg { color: var(--green); }
+
+/* ── Cracked panel ── */
+.cracked-list {
+    background: var(--bg-0); border-radius: var(--radius-sm); padding: 2px 0;
+    max-height: 350px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+}
+.cracked-item {
+    padding: 4px 14px; border-bottom: 1px solid rgba(37,37,64,0.3); color: var(--green);
+    display: flex; justify-content: space-between;
+}
+.cracked-item:hover { background: rgba(80,250,123,0.05); }
+.cracked-hash { color: var(--text-muted); font-size: 11px; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cracked-user { color: var(--accent); font-size: 12px; font-weight: 500; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cracked-pass { color: var(--green); font-weight: 600; }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+.empty-state .icon { font-size: 40px; margin-bottom: 10px; }
+.empty-state p { font-size: 13px; }
+
+/* ── GPU temp bar ── */
+.gpu-bar { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; }
+.gpu-temp { font-weight: 700; }
+.gpu-temp.hot { color: var(--red); }
+.gpu-temp.warm { color: var(--orange); }
+.gpu-temp.cool { color: var(--green); }
+.gpu-util-bar { width: 40px; height: 6px; background: var(--bg-0); border-radius: 3px; overflow: hidden; display: inline-block; }
+.gpu-util-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+
+/* ── Toast variants ── */
+.toast-success { border-color: var(--green) !important; color: var(--green) !important; }
+.toast-error { border-color: var(--red) !important; color: var(--red) !important; }
+.toast-info { border-color: var(--accent) !important; color: var(--accent) !important; }
+
+/* ── File Manager ── */
+.fm-upload-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 16px 20px; text-align: center; cursor: pointer; transition: all .2s;
+    margin: 14px 0 0;
+}
+.fm-upload-zone:hover, .fm-upload-zone.drag-over {
+    border-color: var(--accent); background: rgba(0,212,255,0.05);
+}
+.fm-filter.active { background: rgba(0,212,255,0.15) !important; color: var(--accent) !important; border: 1px solid var(--accent) !important; }
+.fm-row { transition: background .15s; }
+.fm-row:hover { background: var(--bg-2) !important; }
+.fm-row.selected { background: rgba(0,212,255,0.06) !important; }
+.fm-type-icon { font-size: 18px; width: 24px; text-align: center; }
+.fm-name { font-family: monospace; font-size: 12px; word-break: break-all; }
+.fm-name-input { background: var(--bg-0); border: 1px solid var(--accent); color: var(--text); padding: 2px 6px;
+    border-radius: 4px; font-family: monospace; font-size: 12px; width: 100%; }
+
+/* ── History table ── */
+.history-table td { font-size: 12px; }
+.badge-paused { background: var(--yellow-dim); color: var(--yellow); }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 1200px) {
+    .cards { grid-template-columns: repeat(3, 1fr); }
+    #chartPanel .panel-body > div { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 900px) {
+    .sidebar { width: 60px; }
+    .sidebar-logo h1, .nav-section-title, .nav-item span:not(.icon), .sidebar-footer .burn { display: none; }
+    .sidebar-logo { justify-content: center; }
+    .nav-item { justify-content: center; padding: 12px; }
+    .nav-item .badge { display: none; }
+    .sidebar-footer .credit-val { font-size: 12px; text-align: center; }
+    .main { margin-left: 60px; }
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .topbar { padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
+    .topbar-right { flex-wrap: wrap; }
+    .content { padding: 14px 16px; }
+    #chartPanel .panel-body > div { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 600px) {
+    .sidebar { width: 0; display: none; }
+    .main { margin-left: 0; }
+    .cards { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .topbar { padding: 8px 10px; }
+    .topbar h2 { font-size: 14px; }
+    .content { padding: 10px 12px; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 8px; }
+    .panel-header { padding: 10px 14px; flex-direction: column; gap: 8px; align-items: flex-start; }
+    .panel-body { padding: 12px 14px; }
+    .cracked-item { flex-direction: column; gap: 2px; }
+    .cracked-user, .cracked-hash { max-width: 100%; }
+    .topbar-btn { padding: 5px 8px; font-size: 11px; }
+    .btn { padding: 8px 14px; font-size: 12px; }
+}
+
+/* ── Animations ── */
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.animate-pulse { animation: pulse 2s infinite; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-in { animation: slideUp 0.3s ease; }
+
+/* ── Drop zone ── */
+.drop-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 28px 20px; text-align: center; cursor: pointer;
+    transition: all 0.2s; margin-bottom: 16px; color: var(--text-muted);
+    background: var(--bg-0);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent); background: rgba(0,212,255,0.04);
+    color: var(--accent);
+}
+.drop-zone .icon { font-size: 28px; margin-bottom: 6px; display: block; }
+.drop-zone .hint { font-size: 12px; }
+.drop-zone .files-list { text-align: left; margin-top: 10px; font-size: 12px; color: var(--green); }
+.drop-zone .files-list div { padding: 3px 0; }
+
+/* ── Budget bar ── */
+.budget-bar { width: 100%; height: 8px; background: var(--bg-0); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+.budget-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; background: linear-gradient(90deg, var(--green), var(--orange)); }
+.budget-fill.danger { background: linear-gradient(90deg, var(--orange), var(--red)); }
+
+/* ── Search input ── */
+.search-input {
+    background: var(--bg-0); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text);
+    font-size: 13px; outline: none; width: 100%; max-width: 300px;
+    transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <span class="icon">⚡</span>
+        <h1>HashCrack</h1>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">Главное</div>
+            <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
+                <span class="icon">📊</span><span>Dashboard</span>
+            </div>
+            <div class="nav-item" data-page="job" onclick="switchPage('job')">
+                <span class="icon">🚀</span><span>Задача</span>
+            </div>
+            <div class="nav-item" data-page="results" onclick="switchPage('results')">
+                <span class="icon">🔓</span><span>Результаты</span>
+                <span class="badge" id="navCrackedBadge" style="display:none">0</span>
+            </div>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Управление</div>
+            <div class="nav-item" data-page="files" onclick="switchPage('files')">
+                <span class="icon">📁</span><span>Файлы</span>
+            </div>
+            <div class="nav-item" data-page="instances" onclick="switchPage('instances')">
+                <span class="icon">🖥️</span><span>Инстансы</span>
+            </div>
+            <div class="nav-item" data-page="marketplace" onclick="switchPage('marketplace')">
+                <span class="icon">🛒</span><span>Маркетплейс</span>
+            </div>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Система</div>
+            <div class="nav-item" data-page="logs" onclick="switchPage('logs')">
+                <span class="icon">📋</span><span>Логи</span>
+            </div>
+            <div class="nav-item" data-page="history" onclick="switchPage('history')">
+                <span class="icon">📜</span><span>История</span>
+            </div>
+            <div class="nav-item" data-page="settings" onclick="switchPage('settings')">
+                <span class="icon">⚙️</span><span>Настройки</span>
+            </div>
+        </div>
+    </nav>
+    <div class="sidebar-footer">
+        <div style="color:var(--text-muted)">Баланс</div>
+        <span class="credit-val" id="sideCredit">$...</span>
+        <div class="burn">🔥 <span id="sideBurn">$0.00</span>/hr</div>
+    </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+    <!-- Top progress bar -->
+    <div id="topProgressBar" style="height:3px;background:var(--bg-3);width:100%;position:relative;overflow:hidden;display:none">
+        <div id="topProgressFill" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--green));width:0%;transition:width 0.5s ease;border-radius:0 2px 2px 0"></div>
+    </div>
+    <div class="topbar">
+        <div class="topbar-left">
+            <h2 id="pageTitle">Dashboard</h2>
+            <span class="phase-pill" id="phasePill">idle</span>
+        </div>
+        <div class="topbar-right">
+            <button class="topbar-btn" onclick="refreshAll()">↻ Обновить</button>
+            <button class="topbar-btn" id="btnPauseTop" style="display:none" onclick="pauseJob()">⏸ Пауза</button>
+            <button class="topbar-btn" id="btnResumeTop" style="display:none" onclick="resumeJob()">▶ Продолжить</button>
+            <button class="topbar-btn danger" id="btnStopTop" style="display:none" onclick="stopJob()">■ Стоп</button>
+            <button class="topbar-btn" id="btnReconnectTop" style="display:none" onclick="reconnectJob()" title="Переподключиться к машинам после краша">🔄 Переподключить</button>
+            <button class="topbar-btn" id="btnResetTop" style="display:none" onclick="resetJob()">🗑 Сброс</button>
+        </div>
+    </div>
+
+    <div class="content">
+
+    <!-- ═══ PAGE: DASHBOARD ═══ -->
+    <div class="page active" id="page-dashboard">
+        <div class="cards animate-in" id="dashCards">
+            <div class="card purple">
+                <div class="card-label">Фаза</div>
+                <div class="card-value" id="dPhase" style="font-size:16px">⏸ Idle</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Всего хэшей</div>
+                <div class="card-value" id="dHashes">0</div>
+            </div>
+            <div class="card green">
+                <div class="card-label">Взломано</div>
+                <div class="card-value" id="dCracked">0</div>
+                <div class="card-sub" id="dCrackedPct">0%</div>
+            </div>
+            <div class="card orange">
+                <div class="card-label">Машины</div>
+                <div class="card-value" id="dMachines">0</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Время</div>
+                <div class="card-value" id="dElapsed">0:00</div>
+            </div>
+            <div class="card orange">
+                <div class="card-label">Расход</div>
+                <div class="card-value" id="dBurn">$0</div>
+                <div class="card-sub">/час</div>
+            </div>
+            <div class="card red">
+                <div class="card-label">Потрачено</div>
+                <div class="card-value" id="dCost">$0</div>
+                <div class="card-sub">за сессию</div>
+            </div>
+            <div class="card green" id="dCostPerHashCard" style="display:none">
+                <div class="card-label">$/хэш</div>
+                <div class="card-value" id="dCostPerHash" style="font-size:16px">—</div>
+                <div class="card-sub">стоимость взлома</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Суммарная скорость</div>
+                <div class="card-value" id="dSpeed" style="font-size:16px">—</div>
+            </div>
+            <div class="card purple" id="dEtaCard" style="display:none">
+                <div class="card-label">ETA (оценка)</div>
+                <div class="card-value" id="dEta" style="font-size:16px">—</div>
+            </div>
+            <div class="card" id="dBudgetCard" style="display:none">
+                <div class="card-label">Бюджет</div>
+                <div class="card-value" id="dBudgetVal" style="font-size:14px">$0 / $0</div>
+                <div class="budget-bar"><div class="budget-fill" id="dBudgetFill" style="width:0%"></div></div>
+            </div>
+        </div>
+
+        <!-- GPU Telemetry panel -->
+        <div class="panel" id="gpuTelemetryPanel" style="display:none">
+            <div class="panel-header">
+                <h3>🌡️ GPU Мониторинг</h3>
+            </div>
+            <div class="panel-body" id="gpuTelemetryBody" style="display:flex;flex-wrap:wrap;gap:12px">
+            </div>
+        </div>
+
+        <!-- Charts panel -->
+        <div class="panel" id="chartPanel" style="display:none">
+            <div class="panel-header">
+                <h3>📈 Графики реального времени</h3>
+            </div>
+            <div class="panel-body">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                    <div style="position:relative;height:220px"><canvas id="speedChart"></canvas></div>
+                    <div style="position:relative;height:220px"><canvas id="crackedChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Machines table on dashboard -->
+        <div class="panel" id="dashMachinesPanel" style="display:none">
+            <div class="panel-header">
+                <h3>🖥️ Активные машины</h3>
+            </div>
+            <div class="panel-body nopad">
+                <div style="max-height:400px;overflow-y:auto">
+                <table>
+                    <thead><tr>
+                        <th>ID</th><th>GPU</th><th>Статус</th><th>Прогресс</th><th>Скорость</th><th>Взломано</th><th>ETA</th><th>$/hr</th><th>Лог</th>
+                    </tr></thead>
+                    <tbody id="dashMachinesBody"></tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mini log on dashboard -->
+        <div class="panel">
+            <div class="panel-header">
+                <h3>📋 Последние события</h3>
+                <button class="btn btn-ghost btn-sm" onclick="switchPage('logs')">Все логи →</button>
+            </div>
+            <div class="panel-body nopad">
+                <div class="log-container" id="dashLog" style="max-height:200px"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PAGE: JOB ═══ -->
+    <div class="page" id="page-job">
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>🚀 Запуск задачи</h3>
+            </div>
+            <div class="panel-body">
+                <form id="startForm" onsubmit="startJob(event)">
+                    <!-- Mode toggle -->
+                    <div style="margin-bottom:16px;display:flex;gap:6px">
+                        <button type="button" class="btn btn-sm" id="modeRentBtn" onclick="setJobMode('rent')" style="background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid var(--accent)">💰 Арендовать новые</button>
+                        <button type="button" class="btn btn-sm btn-ghost" id="modeExistBtn" onclick="setJobMode('existing')">🖥️ Использовать существующие</button>
+                    </div>
+                    <input type="hidden" name="mode" id="jobModeInput" value="rent">
+                    <input type="hidden" name="instance_ids" id="jobInstanceIds" value="">
+
+                    <!-- Attack mode toggle -->
+                    <div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap">
+                        <button type="button" class="btn btn-sm" id="atkDictBtn" onclick="setAttackMode(0)" style="background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid var(--accent)">📖 Словарь (-a 0)</button>
+                        <button type="button" class="btn btn-sm btn-ghost" id="atkMaskBtn" onclick="setAttackMode(3)">🎭 Маска (-a 3)</button>
+                    </div>
+                    <input type="hidden" name="attack_mode" id="attackModeInput" value="0">
+
+                    <div class="form-grid">
+                        <!-- Dictionary fields -->
+                        <div class="form-group" id="fldArchive">
+                            <label>Архив (wordlist + rules)</label>
+                            <select name="archive_path" id="selArchive">
+                                <option value="">— загрузка... —</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="fldWordlistUrl">
+                            <label>Или URL wordlist</label>
+                            <input type="text" name="wordlist_url" id="inpWordlistUrl" placeholder="https://..." value="" oninput="clearWlPresetHighlight()">
+                            <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;align-items:center" id="wordlistPresets">
+                                <button type="button" class="btn btn-ghost wl-preset" style="font-size:10px;padding:2px 8px" onclick="selectWordlist(this,'https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt','rockyou','~140MB')">rockyou</button>
+                                <button type="button" class="btn btn-ghost wl-preset" style="font-size:10px;padding:2px 8px" onclick="selectWordlist(this,'https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/Common-Credentials/10-million-password-list-top-1000000.txt','Top-1M','~9MB')">Top-1M</button>
+                                <button type="button" class="btn btn-ghost wl-preset" style="font-size:10px;padding:2px 8px" onclick="selectWordlist(this,'https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/xato-net-10-million-passwords.txt','xato-10M','~80MB')">xato-10M</button>
+                                <button type="button" class="btn btn-ghost wl-preset" style="font-size:10px;padding:2px 8px" onclick="selectWordlist(this,'https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/Leaked-Databases/phpbb.txt','phpbb','~3MB')">phpbb</button>
+                                <span id="wlPresetStatus" style="font-size:11px;margin-left:4px"></span>
+                            </div>
+                        </div>
+                        <div class="form-group" id="fldRulesUrl">
+                            <label>Файл rules (опц.)</label>
+                            <select name="rules_path" id="selRules">
+                                <option value="">— нет —</option>
+                            </select>
+                            <label style="margin-top:6px">Или URL rules</label>
+                            <input type="text" name="rules_url" id="inpRulesUrl" placeholder="https://...rules" value="">
+                        </div>
+                        <div class="form-group" id="fldArchiveUrl">
+                            <label>URL архива (быстрая раздача)</label>
+                            <input type="text" name="archive_url" id="inpArchiveUrl" placeholder="https://...wordlist.zip" value="" oninput="clearArchivePresetHighlight()">
+                            <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;align-items:center" id="archivePresets">
+                                <button type="button" class="btn btn-ghost arc-preset" style="font-size:10px;padding:2px 8px" onclick="selectArchivePreset(this,'https://github.com/veynstark-oss/words/raw/main/ps.zip','ps.zip','~63MB')">ps.zip</button>
+                                <span id="arcPresetStatus" style="font-size:11px;margin-left:4px"></span>
+                            </div>
+                            <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Машины скачают архив напрямую по URL вместо загрузки через сервер</div>
+                        </div>
+                        <!-- Combo: mask fallback for dict mode -->
+                        <div class="form-group" id="fldComboMask">
+                            <label>Маска-фоллбэк (опц.)</label>
+                            <input type="text" id="inpMaskCombo" placeholder="?a?a?a?a?a?a" value="">
+                            <div style="font-size:10px;color:var(--text-muted);margin-top:2px">После словаря авто-запуск маски</div>
+                        </div>
+                        <!-- Mask fields (hidden by default, for -a 3 mode) -->
+                        <div class="form-group" id="fldMask" style="display:none">
+                            <label>Маска</label>
+                            <input type="text" id="inpMask" placeholder="?a?a?a?a?a?a" value="">
+                        </div>
+                        <input type="hidden" name="mask" id="hiddenMask" value="">
+                        <div class="form-group" id="fldMaskHelp" style="display:none;grid-column:span 2">
+                            <div style="font-size:11px;color:var(--text-muted);background:var(--bg-0);padding:8px 12px;border-radius:var(--radius-sm)">
+                                ?l=a-z &nbsp; ?u=A-Z &nbsp; ?d=0-9 &nbsp; ?s=спец &nbsp; ?a=все &nbsp; ?b=0x00-0xff<br>
+                                Пример: <code style="color:var(--accent)">?u?l?l?l?l?d?d?d</code> = Passw123
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Файл хэшей</label>
+                            <select name="hashes_path" id="selHashes" required>
+                                <option value="">— загрузка... —</option>
+                            </select>
+                            <button type="button" class="btn btn-ghost" style="font-size:10px;padding:2px 8px;margin-top:4px" onclick="togglePasteHashes()">📋 Вставить хэши</button>
+                            <button type="button" class="btn btn-ghost" style="font-size:10px;padding:2px 8px;margin-top:4px" onclick="detectHashMode()">🔍 Авто-режим</button>
+                        </div>
+                        <div class="form-group" id="fldPasteHashes" style="display:none;grid-column:span 2">
+                            <label>Вставьте хэши (по одному на строку)</label>
+                            <textarea id="txtPasteHashes" rows="6" style="width:100%;background:var(--bg-0);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px;font-family:monospace;font-size:11px;resize:vertical" placeholder="user1:hash1:salt1
+user2:hash2:salt2
+..."></textarea>
+                            <div style="margin-top:4px;display:flex;gap:6px">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="savePastedHashes()">💾 Сохранить как файл</button>
+                                <span id="pasteHashMsg" style="font-size:11px;color:var(--text-dim)"></span>
+                            </div>
+                        </div>
+                        <!-- Rent mode fields -->
+                        <div class="form-group" id="fldNumMachines">
+                            <label>Кол-во машин</label>
+                            <input type="number" name="num_machines" value="5" min="1" max="50">
+                        </div>
+                        <div class="form-group" id="fldGpu">
+                            <label>GPU</label>
+                            <select name="gpu_name">
+                                <option value="RTX 5090">RTX 5090</option>
+                                <option value="RTX 4090">RTX 4090</option>
+                                <option value="RTX 3090">RTX 3090</option>
+                                <option value="RTX A6000">RTX A6000</option>
+                                <option value="A100_SXM4">A100 SXM4</option>
+                                <option value="H100_SXM5">H100 SXM5</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Hashcat mode <span id="detectedModeHint" style="font-size:10px;color:var(--green);display:none"></span></label>
+                            <select name="hashcat_mode" id="selHashMode" onchange="updateModeDesc()">
+                                <option value="0">0 — MD5</option>
+                                <option value="100">100 — SHA1</option>
+                                <option value="1400">1400 — SHA-256</option>
+                                <option value="1700">1700 — SHA-512</option>
+                                <option value="1710" selected>1710 — sha512($pass.$salt)</option>
+                                <option value="1711">1711 — SSHA-512(Base64)</option>
+                                <option value="1800">1800 — sha512crypt $6$</option>
+                                <option value="2500">2500 — WPA/WPA2</option>
+                                <option value="2611">2611 — vBulletin</option>
+                                <option value="3000">3000 — LM</option>
+                                <option value="3200">3200 — bcrypt</option>
+                                <option value="5600">5600 — NetNTLMv2</option>
+                                <option value="7500">7500 — Kerberos 5 AS-REQ</option>
+                                <option value="13100">13100 — Kerberoast TGS-REP</option>
+                                <option value="13400">13400 — KeePass</option>
+                                <option value="15700">15700 — Ethereum Wallet</option>
+                                <option value="18200">18200 — Kerberos 5 AS-REP</option>
+                                <option value="22000">22000 — WPA-PBKDF2-PMKID+EAPOL</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Авто-уничтожение</label>
+                            <select name="auto_destroy" id="selAutoDestroy">
+                                <option value="false" selected>Нет — оставить машины</option>
+                                <option value="true">Да — удалить после завершения</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Лимит бюджета ($)</label>
+                            <input type="number" name="budget_limit" id="inpBudget" value="0" min="0" step="0.5" placeholder="0 = без лимита">
+                        </div>
+                        <div class="form-group" style="grid-column:span 2">
+                            <label>Доп. аргументы hashcat</label>
+                            <input type="text" name="extra_args" id="inpExtraArgs" placeholder="--increment --increment-min=4 --increment-max=8" value="">
+                        </div>
+                    </div>
+                    <!-- File upload drop zone -->
+                    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                        <span class="icon">📁</span>
+                        <div>Перетащите файлы сюда или <strong>нажмите</strong></div>
+                        <div class="hint">Хэши (.txt, .hash) · Архивы (.zip, .tar.gz, .7z)</div>
+                        <div class="files-list" id="uploadedFiles"></div>
+                    </div>
+                    <input type="file" id="fileInput" style="display:none" multiple accept=".txt,.hash,.hashes,.zip,.tar.gz,.tgz,.7z,.rar,.rule,.rules" onchange="handleFileSelect(this.files)">
+                    <!-- Instance picker (for existing mode) -->
+                    <div id="instancePicker" style="display:none;margin-top:14px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                            <label style="font-size:12px;color:var(--text-dim);text-transform:uppercase;font-weight:600">Выберите инстансы</label>
+                            <div style="display:flex;gap:6px">
+                                <button type="button" class="btn btn-ghost btn-sm" onclick="pickAllInstances(true)">Все</button>
+                                <button type="button" class="btn btn-ghost btn-sm" onclick="pickAllInstances(false)">Ничего</button>
+                                <button type="button" class="btn btn-ghost btn-sm" onclick="refreshInstancePicker()">↻ Обновить</button>
+                            </div>
+                        </div>
+                        <div id="instancePickerList" style="background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:250px;overflow-y:auto;padding:4px 0">
+                            <div style="padding:12px;color:var(--text-muted);text-align:center">Загрузка...</div>
+                        </div>
+                        <div id="pickerSummary" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Выбрано: 0</div>
+                    </div>
+                    <!-- Cost estimator -->
+                    <div id="costEstimate" style="margin-top:14px;padding:12px 16px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-sm);display:none">
+                        <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px">
+                            <span>💰 <strong>Оценка:</strong></span>
+                            <span id="estCostHr" style="color:var(--orange)">~$0/hr</span>
+                            <span id="estCost1h" style="color:var(--text-dim)">1hr: $0</span>
+                            <span id="estCost4h" style="color:var(--text-dim)">4hr: $0</span>
+                            <span id="estCost24h" style="color:var(--text-dim)">24hr: $0</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                        <button type="submit" class="btn btn-primary" id="btnStart">▶ Запустить</button>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="savePreset()">💾 Сохр. пресет</button>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="loadPresetMenu()">📂 Загр. пресет</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="btnAddQueue" onclick="addToQueue()" style="display:none">📋 В очередь</button>
+                        <button type="button" class="btn btn-ghost" id="btnPause" style="display:none" onclick="pauseJob()">⏸ Пауза</button>
+                        <button type="button" class="btn btn-primary" id="btnResume" style="display:none" onclick="resumeJob()">▶ Продолжить</button>
+                        <button type="button" class="btn btn-danger" id="btnStop" style="display:none" onclick="stopJob()">■ Остановить всё</button>
+                        <button type="button" class="btn btn-primary" id="btnReconnect" style="display:none" onclick="reconnectJob()">🔄 Переподключить</button>
+                        <span id="jobMsg" style="font-size:12px;color:var(--text-dim)"></span>
+                    </div>
+                    <!-- Queue display -->
+                    <div id="queuePanel" style="display:none;margin-top:14px;padding:12px 16px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-sm)">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                            <span style="font-size:12px;font-weight:600;color:var(--accent)">📋 Очередь задач</span>
+                            <button class="btn btn-ghost btn-sm" onclick="clearQueue()">✕ Очистить</button>
+                        </div>
+                        <div id="queueList" style="font-size:12px;color:var(--text-dim)"></div>
+                    </div>
+                </form>
+                <!-- SSH key warning -->
+                <div id="sshKeyWarn" style="display:none;margin-top:14px;padding:12px 16px;background:var(--red-dim);border:1px solid var(--red);border-radius:var(--radius-sm)">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                        <span style="font-size:13px;color:var(--red)">⚠️ SSH ключ не синхронизирован с Vast.ai!</span>
+                        <button class="btn btn-primary btn-sm" onclick="syncSshKey()">🔑 Синхронизировать</button>
+                        <span id="sshKeyMsg" style="font-size:11px;color:var(--text-dim)"></span>
+                    </div>
+                </div>
+                <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">
+                    Загрузите файлы через drag-and-drop выше или через терминал: <code style="background:var(--bg-0);padding:2px 6px;border-radius:3px;color:var(--accent)">wget URL</code>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PAGE: RESULTS ═══ -->
+    <div class="page" id="page-results">
+        <div class="cards animate-in">
+            <div class="card green">
+                <div class="card-label">Взломано</div>
+                <div class="card-value" id="resCracked">0</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Всего хэшей</div>
+                <div class="card-value" id="resTotal">0</div>
+            </div>
+            <div class="card purple">
+                <div class="card-label">Успех</div>
+                <div class="card-value" id="resPct">0%</div>
+            </div>
+        </div>
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>🔓 Взломанные хэши</h3>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="text" class="search-input" id="crackedSearch" placeholder="🔍 Поиск..." style="max-width:200px" oninput="filterCracked()">
+                    <button class="btn btn-ghost btn-sm" onclick="downloadUncracked()">📤 Невзломанные</button>
+                    <button class="btn btn-ghost btn-sm" onclick="downloadCrackedCsv()">📊 CSV</button>
+                    <button class="btn btn-ghost btn-sm" onclick="downloadCracked()">⬇ Скачать .txt</button>
+                </div>
+            </div>
+            <div class="panel-body nopad">
+                <div class="cracked-list" id="crackedList">
+                    <div class="empty-state"><div class="icon">🔒</div><p>Пока ничего не взломано</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PAGE: INSTANCES ═══ -->
+    <div class="page" id="page-instances">
+        <div style="display:flex;gap:10px;margin-bottom:16px" class="animate-in">
+            <button class="btn btn-ghost" onclick="loadInstances()">↻ Обновить</button>
+            <button class="btn btn-danger btn-sm" onclick="destroyAll()">💀 Уничтожить все</button>
+        </div>
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>🖥️ Мои инстансы Vast.ai</h3>
+                <span id="instCount" style="font-size:12px;color:var(--text-dim)"></span>
+            </div>
+            <div class="panel-body nopad">
+                <div style="max-height:500px;overflow-y:auto">
+                <table>
+                    <thead><tr>
+                        <th>ID</th><th>GPU</th><th>RAM</th><th>Статус</th><th>SSH</th><th>$/hr</th><th>Действия</th>
+                    </tr></thead>
+                    <tbody id="instBody"><tr><td colspan="7" class="empty-state">Загрузка...</td></tr></tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exec panel -->
+        <div class="panel animate-in" style="margin-top:16px">
+            <div class="panel-header">
+                <h3>⌨️ Выполнить команду</h3>
+            </div>
+            <div class="panel-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Instance ID</label>
+                        <input type="number" id="execInstId" placeholder="12345678">
+                    </div>
+                    <div class="form-group">
+                        <label>Команда</label>
+                        <input type="text" id="execCmd" placeholder="nvidia-smi" value="nvidia-smi">
+                    </div>
+                </div>
+                <button class="btn btn-ghost" style="margin-top:10px" onclick="execOnInstance()">▶ Выполнить</button>
+                <pre id="execOutput" style="margin-top:10px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text-dim);max-height:300px;overflow:auto;display:none;white-space:pre-wrap"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PAGE: MARKETPLACE ═══ -->
+    <div class="page" id="page-marketplace">
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>🛒 GPU маркетплейс</h3>
+                <button class="btn btn-ghost btn-sm" id="mktToggleAdv" onclick="toggleAdvFilters()">▼ Больше фильтров</button>
+            </div>
+            <div class="panel-body">
+                <!-- Row 1: main filters -->
+                <div class="form-grid" style="margin-bottom:10px">
+                    <div class="form-group">
+                        <label>GPU</label>
+                        <select id="mktGpu">
+                            <option value="RTX 5090">RTX 5090</option>
+                            <option value="RTX 4090">RTX 4090</option>
+                            <option value="RTX 3090">RTX 3090</option>
+                            <option value="RTX 3080">RTX 3080</option>
+                            <option value="RTX A6000">RTX A6000</option>
+                            <option value="A100_SXM4">A100 SXM4</option>
+                            <option value="A100_PCIE">A100 PCIe</option>
+                            <option value="H100_SXM5">H100 SXM5</option>
+                            <option value="H100_PCIE">H100 PCIe</option>
+                            <option value="L40">L40</option>
+                            <option value="any">Любой GPU</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Кол-во GPU</label>
+                        <select id="mktNumGpus">
+                            <option value="1">1×</option>
+                            <option value="2">2×</option>
+                            <option value="4">4×</option>
+                            <option value="8">8×</option>
+                            <option value="16">16×</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Мин $/hr</label>
+                        <input type="number" id="mktPriceMin" value="0" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Макс $/hr</label>
+                        <input type="number" id="mktPriceMax" value="50" step="0.1" min="0">
+                    </div>
+                </div>
+                <!-- Row 2: advanced filters (hidden) -->
+                <div id="mktAdvFilters" style="display:none">
+                    <div class="form-grid" style="margin-bottom:10px">
+                        <div class="form-group">
+                            <label>Мин VRAM (GB)</label>
+                            <input type="number" id="mktVram" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Мин Download (Mbps)</label>
+                            <input type="number" id="mktDown" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Мин Upload (Mbps)</label>
+                            <input type="number" id="mktUp" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Мин Disk (GB)</label>
+                            <input type="number" id="mktDisk" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Мин CPU Cores</label>
+                            <input type="number" id="mktCpu" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Мин RAM (GB)</label>
+                            <input type="number" id="mktRam" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Мин Reliability %</label>
+                            <input type="number" id="mktReliability" value="0" min="0" max="100" step="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Мин DL Perf</label>
+                            <input type="number" id="mktDlperf" value="0" min="0" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>CUDA ≥</label>
+                            <select id="mktCuda">
+                                <option value="0">Любая</option>
+                                <option value="11.8">11.8</option>
+                                <option value="12.0">12.0</option>
+                                <option value="12.2">12.2</option>
+                                <option value="12.4">12.4</option>
+                                <option value="12.6">12.6</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Verified</label>
+                            <select id="mktVerified">
+                                <option value="true">Только verified</option>
+                                <option value="false">Все</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- Sort + search -->
+                <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+                    <div class="form-group" style="min-width:140px">
+                        <label>Сортировка</label>
+                        <select id="mktSort">
+                            <option value="-dph_total">$/hr ↓ (дорогие)</option>
+                            <option value="dph_total">$/hr ↑ (дешёвые)</option>
+                            <option value="-score">Score ↓</option>
+                            <option value="-dlperf">DL Perf ↓</option>
+                            <option value="-reliability2">Reliability ↓</option>
+                            <option value="-gpu_ram">VRAM ↓</option>
+                            <option value="-inet_down">Download ↓</option>
+                            <option value="-total_flops">FLOPS ↓</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="min-width:80px">
+                        <label>Лимит</label>
+                        <select id="mktLimit">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="searchMarket()" style="height:38px">🔍 Поиск</button>
+                </div>
+            </div>
+        </div>
+        <div class="panel animate-in" id="mktPanel" style="display:none">
+            <div class="panel-header">
+                <h3>Результаты</h3>
+                <div style="display:flex;align-items:center;gap:12px">
+                    <span id="mktSelected" style="font-size:12px;color:var(--green);display:none">0 выбрано</span>
+                    <button class="btn btn-primary btn-sm" id="mktRentBtn" style="display:none" onclick="rentSelected()">🛒 Арендовать выбранные</button>
+                    <span id="mktCount" style="font-size:12px;color:var(--text-dim)"></span>
+                </div>
+            </div>
+            <div class="panel-body nopad">
+                <div style="max-height:600px;overflow-y:auto">
+                <table>
+                    <thead><tr>
+                        <th style="width:36px"><input type="checkbox" id="mktCheckAll" onchange="toggleAllOffers(this.checked)" title="Выбрать все"></th><th>ID</th><th>GPU</th><th>×</th><th>VRAM</th><th>$/hr</th><th>DL/UL Mbps</th><th>CPU</th><th>RAM</th><th>Disk</th><th>Rel%</th><th>CUDA</th><th>Loc</th><th></th>
+                    </tr></thead>
+                    <tbody id="mktBody"></tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PAGE: FILE MANAGER ═══ -->
+    <div class="page" id="page-files">
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>📁 Файловый менеджер</h3>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <span id="fmTotalSize" style="font-size:12px;color:var(--text-dim)"></span>
+                    <button class="btn btn-ghost btn-sm" onclick="loadFileManager()">↻ Обновить</button>
+                </div>
+            </div>
+            <div class="panel-body" style="padding-top:0">
+                <!-- Upload zone -->
+                <div class="fm-upload-zone" id="fmDropZone" onclick="document.getElementById('fmFileInput').click()">
+                    <div style="display:flex;align-items:center;gap:10px;justify-content:center">
+                        <span style="font-size:24px">⬆️</span>
+                        <div>
+                            <div style="font-weight:600">Загрузить файлы</div>
+                            <div style="font-size:11px;color:var(--text-dim)">Перетащите или нажмите • Хэши, архивы, любые файлы</div>
+                        </div>
+                    </div>
+                    <div id="fmUploadProgress" style="margin-top:6px"></div>
+                </div>
+                <input type="file" id="fmFileInput" style="display:none" multiple onchange="fmUploadFiles(this.files)">
+
+                <!-- Filters -->
+                <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;align-items:center">
+                    <div style="display:flex;gap:4px">
+                        <button class="btn btn-sm fm-filter active" data-filter="all" onclick="fmSetFilter('all')">Все</button>
+                        <button class="btn btn-sm btn-ghost fm-filter" data-filter="hashes" onclick="fmSetFilter('hashes')">📄 Хэши</button>
+                        <button class="btn btn-sm btn-ghost fm-filter" data-filter="archive" onclick="fmSetFilter('archive')">📦 Архивы</button>
+                        <button class="btn btn-sm btn-ghost fm-filter" data-filter="rules" onclick="fmSetFilter('rules')">📐 Правила</button>
+                        <button class="btn btn-sm btn-ghost fm-filter" data-filter="other" onclick="fmSetFilter('other')">📎 Другие</button>
+                    </div>
+                    <input type="text" id="fmSearch" placeholder="🔍 Поиск..." oninput="fmRenderList()"
+                        style="flex:1;min-width:150px;padding:6px 10px;background:var(--bg-0);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);font-size:12px">
+                    <div style="font-size:12px;color:var(--text-dim)" id="fmCount">0 файлов</div>
+                </div>
+
+                <!-- File table -->
+                <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width:24px"><input type="checkbox" id="fmCheckAll" onchange="fmToggleAll(this.checked)"></th>
+                            <th>Тип</th>
+                            <th style="cursor:pointer" onclick="fmSort('name')">Имя ↕</th>
+                            <th style="cursor:pointer" onclick="fmSort('size')">Размер ↕</th>
+                            <th>Строк</th>
+                            <th style="cursor:pointer" onclick="fmSort('modified')">Дата ↕</th>
+                            <th style="width:120px">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fmBody"></tbody>
+                </table>
+                </div>
+
+                <!-- Batch actions -->
+                <div id="fmBatchActions" style="display:none;margin-top:10px;padding:10px 14px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-sm);display:none;align-items:center;gap:10px">
+                    <span style="font-size:12px;color:var(--text-dim)">Выбрано: <strong id="fmSelectedCount">0</strong></span>
+                    <button class="btn btn-danger btn-sm" onclick="fmDeleteSelected()">🗑 Удалить выбранные</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PAGE: LOGS ═══ -->
+    <div class="page" id="page-logs">
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>📋 Журнал событий</h3>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-ghost btn-sm" onclick="downloadLogs()">⬇ Экспорт</button>
+                    <button class="btn btn-ghost btn-sm" onclick="clearLogs()">Очистить</button>
+                </div>
+            </div>
+            <div class="panel-body nopad">
+                <div class="log-container" id="fullLog" style="max-height:600px"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PAGE: HISTORY ═══ -->
+    <div class="page" id="page-history">
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>📜 История задач</h3>
+                <button class="btn btn-ghost btn-sm" onclick="loadHistory()">↻ Обновить</button>
+            </div>
+            <div class="panel-body nopad">
+                <div style="max-height:500px;overflow-y:auto">
+                <table class="history-table">
+                    <thead><tr>
+                        <th>Дата</th><th>Хэши</th><th>Взломано</th><th>%</th><th>Время</th><th>Стоимость</th><th>Машины</th><th>GPU</th><th>Mode</th>
+                    </tr></thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="9"><div class="empty-state"><p>Загрузка...</p></div></td></tr>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PAGE: SETTINGS ═══ -->
+    <div class="page" id="page-settings">
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>🔑 SSH ключ</h3>
+            </div>
+            <div class="panel-body">
+                <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">
+                    Для подключения к инстансам Vast.ai, ваш SSH ключ должен быть зарегистрирован в аккаунте.
+                </p>
+                <div id="sshKeyStatus" style="padding:12px 16px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:14px">
+                    <span style="color:var(--text-dim)">Загрузка...</span>
+                </div>
+                <button class="btn btn-primary" onclick="syncSshKey()">🔄 Синхронизировать ключ с Vast.ai</button>
+                <span id="settSshMsg" style="margin-left:10px;font-size:12px;color:var(--text-dim)"></span>
+            </div>
+        </div>
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>👤 Аккаунт Vast.ai</h3>
+            </div>
+            <div class="panel-body" id="accountInfo">
+                <span style="color:var(--text-dim)">Загрузка...</span>
+            </div>
+        </div>
+        <div class="panel animate-in">
+            <div class="panel-header">
+                <h3>ℹ️ О системе</h3>
+            </div>
+            <div class="panel-body" style="font-size:13px;color:var(--text-dim)">
+                <p><strong>HashCrack Panel</strong> — распределённый hashcat оркестратор для Vast.ai</p>
+                <p style="margin-top:8px">Автоматическая аренда GPU, деплой, мониторинг, сбор результатов.</p>
+                <p style="margin-top:8px">v3.0: potfile sync, GPU мониторинг, mask attack, pause/resume, история</p>
+                <p style="margin-top:8px;color:var(--text-muted)">v3.0</p>
+            </div>
+        </div>
+    </div>
+
+    </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Notification toast -->
+<div id="toastContainer" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px"></div>
+
+<script>
+// ═══ STATE ═══
+let polling = null;
+let logTs = 0;
+let currentPage = 'dashboard';
+
+const phaseMap = {
+    idle: '⏸ Idle', renting: '💰 Аренда', booting: '🔄 Загрузка',
+    deploying: '📤 Деплой', running: '▶ Работает', done: '✅ Готово',
+    error: '❌ Ошибка', stopped: '⏹ Остановлен', connecting: '🔌 Подключение',
+    reconnecting: '🔄 Переподключение',
+    replacing: '🔄 Замена машины',
+};
+
+// ═══ NAVIGATION ═══
+function switchPage(page) {
+    currentPage = page;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+    const titles = { dashboard: 'Dashboard', job: 'Новая задача', results: 'Результаты', files: 'Файлы', instances: 'Инстансы', marketplace: 'Маркетплейс', logs: 'Логи', history: 'История', settings: 'Настройки' };
+    document.getElementById('pageTitle').textContent = titles[page] || page;
+
+    if (page === 'instances') loadInstances();
+    if (page === 'results') loadCracked();
+    if (page === 'settings') loadSettings();
+    if (page === 'history') loadHistory();
+    if (page === 'files') loadFileManager();
+}
+
+// ═══ FORMATTING ═══
+function fmt(n) { return n.toLocaleString('ru-RU'); }
+function fmtTime(sec) {
+    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+    return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+}
+function fmtSize(b) {
+    if (b > 1073741824) return (b/1073741824).toFixed(1) + ' GB';
+    if (b > 1048576) return (b/1048576).toFixed(0) + ' MB';
+    if (b > 1024) return (b/1024).toFixed(0) + ' KB';
+    return b + ' B';
+}
+function badgeClass(s) {
+    if (!s) return 'badge-loading';
+    const sl = s.toLowerCase();
+    if (sl.startsWith('err')) return 'badge-error';
+    if (sl === 'running') return 'badge-running';
+    if (sl === 'done') return 'badge-done';
+    return 'badge-' + sl;
+}
+
+// ═══ POLLING ═══
+async function pollStatus() {
+    try {
+        const [statusR, logsR] = await Promise.all([
+            fetch('/api/status'),
+            fetch('/api/logs?after=' + logTs),
+        ]);
+        const d = await statusR.json();
+        const lg = await logsR.json();
+
+        // Update sidebar
+        document.getElementById('sideCredit').textContent = '$' + d.credit.toFixed(2);
+        document.getElementById('sideBurn').textContent = '$' + d.burn_rate.toFixed(2);
+
+        // Phase pill
+        const pill = document.getElementById('phasePill');
+        pill.textContent = phaseMap[d.phase] || d.phase;
+        pill.className = 'phase-pill ' + d.phase;
+        if (d.error) pill.textContent = '❌ ' + d.error.slice(0, 50);
+
+        // Dashboard cards
+        document.getElementById('dPhase').textContent = phaseMap[d.phase] || d.phase;
+        document.getElementById('dHashes').textContent = fmt(d.total_hashes);
+        document.getElementById('dCracked').textContent = fmt(d.total_cracked);
+        document.getElementById('dCrackedPct').textContent = d.total_hashes ? ((d.total_cracked / d.total_hashes) * 100).toFixed(1) + '%' : '—';
+        document.getElementById('dMachines').textContent = d.machines.length;
+        document.getElementById('dElapsed').textContent = fmtTime(d.elapsed);
+        document.getElementById('dBurn').textContent = '$' + d.burn_rate.toFixed(2);
+        document.getElementById('dCost').textContent = '$' + (d.total_cost || 0).toFixed(2);
+        document.getElementById('dSpeed').textContent = d.total_speed || '—';
+
+        // Cost per hash card
+        const cphCard = document.getElementById('dCostPerHashCard');
+        if (d.total_cracked > 0 && d.total_cost > 0) {
+            cphCard.style.display = '';
+            const cph = d.total_cost / d.total_cracked;
+            document.getElementById('dCostPerHash').textContent = cph < 0.001 ? cph.toExponential(2) : '$' + cph.toFixed(4);
+        } else {
+            cphCard.style.display = 'none';
+        }
+
+        // ETA card
+        const etaCard = document.getElementById('dEtaCard');
+        if (d.overall_eta && d.active) {
+            etaCard.style.display = '';
+            document.getElementById('dEta').textContent = d.overall_eta;
+        } else {
+            etaCard.style.display = 'none';
+        }
+
+        // Budget card
+        const budgetCard = document.getElementById('dBudgetCard');
+        const bl = d.budget_limit || 0;
+        if (bl > 0) {
+            budgetCard.style.display = '';
+            const pct = Math.min((d.total_cost / bl) * 100, 100);
+            document.getElementById('dBudgetVal').textContent = `$${(d.total_cost||0).toFixed(2)} / $${bl.toFixed(2)}`;
+            const fill = document.getElementById('dBudgetFill');
+            fill.style.width = pct + '%';
+            fill.className = 'budget-fill' + (pct >= 80 ? ' danger' : '');
+        } else {
+            budgetCard.style.display = 'none';
+        }
+
+        // Results page
+        document.getElementById('resCracked').textContent = fmt(d.total_cracked);
+        document.getElementById('resTotal').textContent = fmt(d.total_hashes);
+        document.getElementById('resPct').textContent = d.total_hashes ? ((d.total_cracked / d.total_hashes) * 100).toFixed(1) + '%' : '—';
+
+        // Cracked badge
+        const badge = document.getElementById('navCrackedBadge');
+        if (d.total_cracked > 0) { badge.style.display = ''; badge.textContent = d.total_cracked; }
+        else badge.style.display = 'none';
+
+        // Stop/Pause/Resume/Reset buttons
+        const isActive = d.active;
+        const isRunning = d.phase === 'running';
+        const isPaused = d.paused;
+        const isDone = d.phase === 'done' || d.phase === 'stopped' || d.phase === 'error';
+        const showStop = isActive;
+        document.getElementById('btnStopTop').style.display = showStop ? '' : 'none';
+        document.getElementById('btnStop').style.display = showStop ? '' : 'none';
+        document.getElementById('btnPauseTop').style.display = (isRunning && !isPaused) ? '' : 'none';
+        document.getElementById('btnResumeTop').style.display = (isRunning && isPaused) ? '' : 'none';
+        document.getElementById('btnPause').style.display = (isRunning && !isPaused) ? '' : 'none';
+        document.getElementById('btnResume').style.display = (isRunning && isPaused) ? '' : 'none';
+        document.getElementById('btnStart').disabled = isActive;
+        document.getElementById('btnResetTop').style.display = ((isDone || d.phase === 'idle') && !isActive) ? '' : 'none';
+        const canReconnect = d.phase === 'stopped' && !isActive && d.machines && d.machines.length > 0;
+        document.getElementById('btnReconnectTop').style.display = canReconnect ? '' : 'none';
+        document.getElementById('btnReconnect').style.display = canReconnect ? '' : 'none';
+
+        // Phase pill — show paused state
+        if (isPaused) {
+            pill.textContent = '⏸ Пауза';
+            pill.className = 'phase-pill booting';
+        }
+
+        // Machines table
+        const mPanel = document.getElementById('dashMachinesPanel');
+        if (d.machines.length > 0 && (d.active || d.phase === 'stopped' || d.phase === 'reconnecting')) {
+            mPanel.style.display = '';
+            const tbody = document.getElementById('dashMachinesBody');
+            tbody.innerHTML = '';
+            for (const m of d.machines) {
+                const pct = (m.progress || 0).toFixed(1);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family:monospace;font-size:12px">${m.id}</td>
+                    <td>${m.gpu}${m.num_gpus > 1 ? ' ×'+m.num_gpus : ''}</td>
+                    <td><span class="badge-s ${badgeClass(m.status)}">${m.status}</span></td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div class="pbar" style="width:90px"><div class="pbar-fill" style="width:${pct}%"></div></div>
+                            <span style="font-size:11px;color:var(--text-dim)">${pct}%</span>
+                        </div>
+                    </td>
+                    <td style="font-size:12px;color:var(--text-dim)">${m.speed || '—'}</td>
+                    <td style="color:var(--green);font-weight:600">${m.cracked || 0}</td>
+                    <td style="font-size:12px;color:var(--text-dim)">${m.eta || '—'}</td>
+                    <td style="color:var(--orange)">$${(m.dph||0).toFixed(2)}</td>
+                    <td style="font-size:11px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(m.log||'')}">${escHtml(m.log||'—')}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        } else {
+            mPanel.style.display = 'none';
+        }
+
+        // GPU Telemetry
+        const gpuPanel = document.getElementById('gpuTelemetryPanel');
+        const gpuBody = document.getElementById('gpuTelemetryBody');
+        if (d.gpu_stats && d.gpu_stats.length > 0 && d.active) {
+            gpuPanel.style.display = '';
+            gpuBody.innerHTML = '';
+            for (const machine of d.gpu_stats) {
+                for (const g of machine.gpus) {
+                    const tempClass = g.temp >= 85 ? 'hot' : g.temp >= 70 ? 'warm' : 'cool';
+                    const utilColor = g.util >= 90 ? 'var(--green)' : g.util >= 50 ? 'var(--orange)' : 'var(--red)';
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;min-width:200px;';
+                    card.innerHTML = `
+                        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">GPU ${g.index} • ID ${machine.id}</div>
+                        <div class="gpu-bar">
+                            <span class="gpu-temp ${tempClass}">${g.temp}°C</span>
+                            <div class="gpu-util-bar"><div class="gpu-util-fill" style="width:${g.util}%;background:${utilColor}"></div></div>
+                            <span style="color:var(--text-dim)">${g.util}%</span>
+                            <span style="color:var(--text-muted);font-size:10px">${g.mem_used}/${g.mem_total}MB</span>
+                            ${g.power ? `<span style="color:var(--orange);font-size:10px">${g.power.toFixed(0)}W</span>` : ''}
+                        </div>
+                    `;
+                    gpuBody.appendChild(card);
+                }
+            }
+        } else {
+            gpuPanel.style.display = 'none';
+        }
+
+        // Charts
+        updateCharts(d);
+
+        // Logs
+        if (lg.logs && lg.logs.length > 0) {
+            logTs = lg.logs[lg.logs.length - 1].ts;
+            const dashLog = document.getElementById('dashLog');
+            const fullLog = document.getElementById('fullLog');
+            for (const e of lg.logs) {
+                const div = document.createElement('div');
+                div.className = 'log-entry ' + e.level;
+                div.innerHTML = `<span class="log-time">${e.time}</span><span class="log-msg">${escHtml(e.msg)}</span>`;
+                dashLog.appendChild(div);
+                fullLog.appendChild(div.cloneNode(true));
+            }
+            dashLog.scrollTop = dashLog.scrollHeight;
+            fullLog.scrollTop = fullLog.scrollHeight;
+            // Trim dash log
+            while (dashLog.children.length > 50) dashLog.removeChild(dashLog.firstChild);
+        }
+
+        // Auto-stop polling if done
+        if (isDone) {
+            document.getElementById('btnStart').disabled = false;
+        }
+
+        // Notification on milestone cracks (every 5000)
+        if (d.new_crack && d.total_cracked > 0) {
+            showNotification(`🔓 Взломано: ${d.total_cracked} хэшей!`);
+        }
+
+        // Tab title with progress
+        if (d.active && d.total_hashes > 0) {
+            const pctVal = ((d.total_cracked / d.total_hashes) * 100).toFixed(1);
+            document.title = `[${pctVal}%] ${d.total_cracked}/${d.total_hashes} — HashCrack`;
+        } else if (d.phase === 'done') {
+            document.title = `✅ ${d.total_cracked} cracked — HashCrack`;
+        } else {
+            document.title = 'HashCrack Panel v3';
+        }
+
+        // Top progress bar
+        const topBar = document.getElementById('topProgressBar');
+        const topFill = document.getElementById('topProgressFill');
+        if (d.active && d.total_hashes > 0) {
+            topBar.style.display = '';
+            const pctBar = Math.min((d.total_cracked / d.total_hashes) * 100, 100);
+            topFill.style.width = pctBar + '%';
+        } else if (d.phase === 'done' && d.total_hashes > 0) {
+            topBar.style.display = '';
+            topFill.style.width = '100%';
+            topFill.style.background = 'var(--green)';
+        } else {
+            topBar.style.display = 'none';
+        }
+
+    } catch (e) {
+        console.error('Poll error:', e);
+    }
+}
+
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══ JOB MODE TOGGLE ═══
+let jobMode = 'rent';
+let attackMode = 0;
+
+function selectWordlist(btn, url, name, size) {
+    document.getElementById('inpWordlistUrl').value = url;
+    // Highlight active button
+    document.querySelectorAll('.wl-preset').forEach(b => {
+        b.style.cssText = 'font-size:10px;padding:2px 8px';
+        b.className = 'btn btn-ghost wl-preset';
+    });
+    btn.style.cssText = 'font-size:10px;padding:2px 8px;background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid var(--accent)';
+    // Show status
+    const st = document.getElementById('wlPresetStatus');
+    st.innerHTML = `<span style="color:var(--green)">✓ ${name}</span> <span style="color:var(--text-muted)">(${size})</span>`;
+    showToast(`📖 Wordlist: ${name} (${size})`, 'info');
+}
+
+function clearWlPresetHighlight() {
+    document.querySelectorAll('.wl-preset').forEach(b => {
+        b.style.cssText = 'font-size:10px;padding:2px 8px';
+        b.className = 'btn btn-ghost wl-preset';
+    });
+    document.getElementById('wlPresetStatus').innerHTML = '';
+}
+
+function selectArchivePreset(btn, url, name, size) {
+    document.getElementById('inpArchiveUrl').value = url;
+    // Also clear local archive selection since we're using URL
+    const selArchive = document.getElementById('selArchive');
+    if (selArchive) selArchive.value = '';
+    // Highlight active button
+    document.querySelectorAll('.arc-preset').forEach(b => {
+        b.style.cssText = 'font-size:10px;padding:2px 8px';
+        b.className = 'btn btn-ghost arc-preset';
+    });
+    btn.style.cssText = 'font-size:10px;padding:2px 8px;background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid var(--accent)';
+    const st = document.getElementById('arcPresetStatus');
+    st.innerHTML = `<span style="color:var(--green)">✓ ${name}</span> <span style="color:var(--text-muted)">(${size})</span>`;
+    showToast(`📦 Архив: ${name} (${size}) — машины скачают напрямую`, 'info');
+}
+
+function clearArchivePresetHighlight() {
+    document.querySelectorAll('.arc-preset').forEach(b => {
+        b.style.cssText = 'font-size:10px;padding:2px 8px';
+        b.className = 'btn btn-ghost arc-preset';
+    });
+    document.getElementById('arcPresetStatus').innerHTML = '';
+}
+
+function setAttackMode(mode) {
+    attackMode = mode;
+    document.getElementById('attackModeInput').value = mode;
+    const dictBtn = document.getElementById('atkDictBtn');
+    const maskBtn = document.getElementById('atkMaskBtn');
+    const fldArchive = document.getElementById('fldArchive');
+    const fldWlUrl = document.getElementById('fldWordlistUrl');
+    const fldRulesUrl = document.getElementById('fldRulesUrl');
+    const fldComboMask = document.getElementById('fldComboMask');
+    const fldMask = document.getElementById('fldMask');
+    const fldMaskHelp = document.getElementById('fldMaskHelp');
+
+    if (mode === 0) {
+        dictBtn.style.cssText = 'background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid var(--accent)';
+        maskBtn.style.cssText = '';
+        maskBtn.className = 'btn btn-sm btn-ghost';
+        fldArchive.style.display = '';
+        fldWlUrl.style.display = '';
+        fldRulesUrl.style.display = '';
+        fldComboMask.style.display = '';
+        fldMask.style.display = 'none';
+        fldMaskHelp.style.display = 'none';
+    } else {
+        maskBtn.style.cssText = 'background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid var(--accent)';
+        dictBtn.style.cssText = '';
+        dictBtn.className = 'btn btn-sm btn-ghost';
+        fldArchive.style.display = 'none';
+        fldWlUrl.style.display = 'none';
+        fldRulesUrl.style.display = 'none';
+        fldComboMask.style.display = 'none';
+        fldMask.style.display = '';
+        fldMaskHelp.style.display = '';
+    }
+}
+
+function setJobMode(mode) {
+    jobMode = mode;
+    document.getElementById('jobModeInput').value = mode;
+    const rentBtn = document.getElementById('modeRentBtn');
+    const existBtn = document.getElementById('modeExistBtn');
+    const picker = document.getElementById('instancePicker');
+    const fldNum = document.getElementById('fldNumMachines');
+    const fldGpu = document.getElementById('fldGpu');
+
+    if (mode === 'rent') {
+        rentBtn.style.cssText = 'background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid var(--accent)';
+        existBtn.style.cssText = '';
+        existBtn.className = 'btn btn-sm btn-ghost';
+        picker.style.display = 'none';
+        fldNum.style.display = '';
+        fldGpu.style.display = '';
+    } else {
+        existBtn.style.cssText = 'background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid var(--accent)';
+        rentBtn.style.cssText = '';
+        rentBtn.className = 'btn btn-sm btn-ghost';
+        picker.style.display = '';
+        fldNum.style.display = 'none';
+        fldGpu.style.display = 'none';
+        refreshInstancePicker();
+    }
+    updateCostEstimate();
+}
+
+async function refreshInstancePicker() {
+    const list = document.getElementById('instancePickerList');
+    list.innerHTML = '<div style="padding:12px;color:var(--text-muted);text-align:center">Загрузка...</div>';
+    try {
+        const r = await fetch('/api/instances');
+        const d = await r.json();
+        const running = d.instances.filter(i => i.status === 'running');
+        if (running.length === 0) {
+            list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted)"><p>Нет запущенных инстансов</p><p style="font-size:11px;margin-top:4px">Сначала арендуйте машины в Маркетплейсе</p></div>';
+            updatePickerSummary();
+            return;
+        }
+        list.innerHTML = '';
+        for (const inst of running) {
+            const row = document.createElement('label');
+            row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;border-bottom:1px solid rgba(37,37,64,0.3)';
+            row.innerHTML = `
+                <input type="checkbox" class="inst-pick" value="${inst.id}" data-dph="${inst.dph}" checked onchange="updatePickerSummary()" style="accent-color:var(--accent);width:16px;height:16px">
+                <span style="font-family:monospace;font-size:12px;color:var(--text-dim);min-width:80px">${inst.id}</span>
+                <span style="font-weight:600;min-width:90px">${inst.gpu}${inst.num_gpus > 1 ? ' ×'+inst.num_gpus : ''}</span>
+                <span style="font-size:12px;color:var(--text-dim)">${inst.gpu_ram}GB</span>
+                <span style="font-size:12px;color:var(--text-dim)">${inst.ssh_host ? inst.ssh_host+':'+inst.ssh_port : '—'}</span>
+                <span style="margin-left:auto;color:var(--orange);font-size:12px;font-weight:600">$${inst.dph.toFixed(3)}/hr</span>
+            `;
+            row.addEventListener('mouseover', () => row.style.background = 'rgba(255,255,255,0.02)');
+            row.addEventListener('mouseout', () => row.style.background = '');
+            list.appendChild(row);
+        }
+        updatePickerSummary();
+    } catch(e) {
+        list.innerHTML = `<div style="padding:12px;color:var(--red)">Ошибка: ${e}</div>`;
+    }
+}
+
+function pickAllInstances(check) {
+    document.querySelectorAll('.inst-pick').forEach(cb => cb.checked = check);
+    updatePickerSummary();
+}
+
+function updatePickerSummary() {
+    const checked = document.querySelectorAll('.inst-pick:checked');
+    let totalDph = 0;
+    const ids = [];
+    checked.forEach(cb => { ids.push(cb.value); totalDph += parseFloat(cb.dataset.dph || 0); });
+    document.getElementById('pickerSummary').textContent = `Выбрано: ${ids.length} машин • ~$${totalDph.toFixed(2)}/hr`;
+    document.getElementById('jobInstanceIds').value = ids.join(',');
+}
+
+// ═══ JOB CONTROL ═══
+async function startJob(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnStart');
+    btn.disabled = true;
+    document.getElementById('jobMsg').textContent = 'Запуск...';
+
+    // Sync mask field: use mask input for -a 3, combo mask for -a 0
+    if (attackMode === 3) {
+        document.getElementById('hiddenMask').value = document.getElementById('inpMask').value;
+    } else {
+        document.getElementById('hiddenMask').value = document.getElementById('inpMaskCombo').value;
+    }
+
+    // Validate existing mode
+    if (jobMode === 'existing') {
+        const ids = document.getElementById('jobInstanceIds').value;
+        if (!ids) {
+            document.getElementById('jobMsg').textContent = '✗ Выберите хотя бы 1 инстанс';
+            btn.disabled = false;
+            return;
+        }
+    }
+
+    const fd = new FormData(e.target);
+    try {
+        const r = await fetch('/api/start', { method: 'POST', body: fd });
+        const text = await r.text();
+        let d;
+        try { d = JSON.parse(text); } catch {
+            document.getElementById('jobMsg').textContent = 'Ошибка: ' + text.slice(0, 100);
+            btn.disabled = false;
+            return;
+        }
+        if (r.ok) {
+            document.getElementById('jobMsg').textContent = `✓ Запущено. Хэшей: ${d.total_hashes}`;
+            switchPage('dashboard');
+            startPolling();
+        } else {
+            document.getElementById('jobMsg').textContent = '✗ ' + (d.detail || JSON.stringify(d));
+            btn.disabled = false;
+        }
+    } catch (err) {
+        document.getElementById('jobMsg').textContent = '✗ ' + err;
+        btn.disabled = false;
+    }
+}
+
+async function stopJob() {
+    if (!confirm('Остановить задачу? Машины останутся запущенными.')) return;
+    try {
+        const r = await fetch('/api/stop', { method: 'POST' });
+        const d = await r.json();
+        document.getElementById('btnStart').disabled = false;
+        pollStatus();
+    } catch (e) {
+        alert('Ошибка: ' + e);
+    }
+}
+
+async function resetJob() {
+    try {
+        const r = await fetch('/api/reset', { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) {
+            showToast('🗑 Состояние сброшено', 'info');
+            document.getElementById('dashMachinesPanel').style.display = 'none';
+            document.getElementById('gpuTelemetryPanel').style.display = 'none';
+            document.getElementById('btnStart').disabled = false;
+            pollStatus();
+        }
+    } catch (e) {
+        showToast('Ошибка: ' + e, 'error');
+    }
+}
+
+async function pauseJob() {
+    try {
+        const r = await fetch('/api/pause', { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) {
+            showToast('⏸ Задача приостановлена (checkpoint)', 'info');
+        } else {
+            showToast('Ошибка паузы', 'error');
+        }
+        pollStatus();
+    } catch (e) {
+        showToast('Ошибка: ' + e, 'error');
+    }
+}
+
+async function resumeJob() {
+    try {
+        const r = await fetch('/api/resume', { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) {
+            showToast('▶ Задача возобновлена', 'info');
+        } else {
+            showToast('Ошибка возобновления', 'error');
+        }
+        pollStatus();
+    } catch (e) {
+        showToast('Ошибка: ' + e, 'error');
+    }
+}
+
+async function reconnectJob() {
+    if (!confirm('Переподключиться к работающим машинам и продолжить мониторинг?')) return;
+    try {
+        const fd = new FormData();
+        fd.append('hashcat_mode', '1710');
+        const r = await fetch('/api/reconnect', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.ok) {
+            showToast(`🔄 Переподключение к ${d.machines} машинам...`, 'info');
+        } else {
+            showToast('Ошибка: ' + JSON.stringify(d), 'error');
+        }
+        pollStatus();
+    } catch (e) {
+        showToast('Ошибка: ' + e, 'error');
+    }
+}
+
+function startPolling() {
+    if (polling) clearInterval(polling);
+    polling = setInterval(pollStatus, 3000);
+    pollStatus();
+    setTimeout(pollStatus, 1000);
+}
+
+// ═══ FILES ═══
+async function loadFiles() {
+    try {
+        const r = await fetch('/api/files');
+        const d = await r.json();
+        const selA = document.getElementById('selArchive');
+        const selH = document.getElementById('selHashes');
+        const selR = document.getElementById('selRules');
+        selA.innerHTML = '<option value="">— выберите архив —</option>';
+        selH.innerHTML = '<option value="">— выберите файл —</option>';
+        selR.innerHTML = '<option value="">— нет —</option>';
+        for (const f of d.archives)
+            selA.innerHTML += `<option value="${f.path}">${f.name} (${fmtSize(f.size)})</option>`;
+        for (const f of d.hashes)
+            selH.innerHTML += `<option value="${f.path}">${f.name} (${fmtSize(f.size)})</option>`;
+        for (const f of (d.rules || []))
+            selR.innerHTML += `<option value="${f.path}">${f.name} (${fmtSize(f.size)})</option>`;
+        if (d.archives.length === 1) selA.selectedIndex = 1;
+        if (d.hashes.length === 1) selH.selectedIndex = 1;
+        if ((d.rules || []).length === 1) selR.selectedIndex = 1;
+    } catch (e) { console.error('Load files error', e); }
+}
+
+// ═══ INSTANCES ═══
+async function loadInstances() {
+    try {
+        const r = await fetch('/api/instances');
+        const d = await r.json();
+        const tbody = document.getElementById('instBody');
+        document.getElementById('instCount').textContent = d.instances.length + ' инстансов';
+
+        if (d.instances.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="icon">🖥️</div><p>Нет инстансов</p></div></td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        for (const i of d.instances) {
+            const ssh = i.ssh_host ? `${i.ssh_host}:${i.ssh_port}` : '—';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-family:monospace;font-size:12px">${i.id}</td>
+                <td>${i.gpu}${i.num_gpus > 1 ? ' ×'+i.num_gpus : ''}</td>
+                <td>${i.gpu_ram}GB</td>
+                <td><span class="badge-s ${badgeClass(i.status)}">${i.status}</span></td>
+                <td style="font-size:11px;color:var(--text-dim)">${ssh}</td>
+                <td style="color:var(--orange)">$${i.dph.toFixed(3)}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="destroyInst(${i.id})">✕</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    } catch (e) {
+        console.error('Load instances error', e);
+    }
+}
+
+async function destroyInst(id) {
+    if (!confirm(`Уничтожить инстанс ${id}?`)) return;
+    await fetch(`/api/instances/${id}/destroy`, { method: 'POST' });
+    loadInstances();
+}
+
+async function destroyAll() {
+    if (!confirm('Уничтожить ВСЕ инстансы?')) return;
+    const r = await fetch('/api/instances/destroy-all', { method: 'POST' });
+    const d = await r.json();
+    alert(`Уничтожено: ${d.destroyed?.length || 0}`);
+    loadInstances();
+}
+
+async function execOnInstance() {
+    const id = document.getElementById('execInstId').value;
+    const cmd = document.getElementById('execCmd').value;
+    if (!id || !cmd) return alert('Укажите ID и команду');
+    const out = document.getElementById('execOutput');
+    out.style.display = '';
+    out.textContent = 'Выполнение...';
+    try {
+        const fd = new FormData();
+        fd.append('cmd', cmd);
+        const r = await fetch(`/api/instances/${id}/exec`, { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.ok) {
+            out.textContent = d.stdout || d.stderr || '(пусто)';
+        } else {
+            out.textContent = '✗ ' + d.error;
+        }
+    } catch (e) {
+        out.textContent = '✗ ' + e;
+    }
+}
+
+// ═══ MARKETPLACE ═══
+function toggleAdvFilters() {
+    const el = document.getElementById('mktAdvFilters');
+    const btn = document.getElementById('mktToggleAdv');
+    if (el.style.display === 'none') {
+        el.style.display = '';
+        btn.textContent = '▲ Скрыть фильтры';
+    } else {
+        el.style.display = 'none';
+        btn.textContent = '▼ Больше фильтров';
+    }
+}
+
+async function searchMarket() {
+    const params = new URLSearchParams({
+        gpu: document.getElementById('mktGpu').value,
+        num_gpus: document.getElementById('mktNumGpus').value,
+        min_price: document.getElementById('mktPriceMin').value || '0',
+        max_price: document.getElementById('mktPriceMax').value || '50',
+        min_gpu_ram: document.getElementById('mktVram').value || '0',
+        min_inet_down: document.getElementById('mktDown').value || '0',
+        min_inet_up: document.getElementById('mktUp').value || '0',
+        min_disk: document.getElementById('mktDisk').value || '0',
+        min_cpu: document.getElementById('mktCpu').value || '0',
+        min_ram: document.getElementById('mktRam').value || '0',
+        min_reliability: (parseFloat(document.getElementById('mktReliability').value || '0') / 100).toFixed(2),
+        min_dlperf: document.getElementById('mktDlperf').value || '0',
+        cuda_ver: document.getElementById('mktCuda').value || '0',
+        verified: document.getElementById('mktVerified').value,
+        sort: document.getElementById('mktSort').value,
+        limit: document.getElementById('mktLimit').value,
+    });
+
+    document.getElementById('mktPanel').style.display = '';
+    document.getElementById('mktBody').innerHTML = '<tr><td colspan="14">🔍 Поиск...</td></tr>';
+
+    try {
+        const r = await fetch('/api/marketplace?' + params);
+        const d = await r.json();
+        document.getElementById('mktCount').textContent = d.offers.length + ' предложений';
+        const tbody = document.getElementById('mktBody');
+
+        if (d.error) {
+            tbody.innerHTML = `<tr><td colspan="14" style="color:var(--red)">Ошибка: ${d.error}</td></tr>`;
+            return;
+        }
+        if (d.offers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="14"><div class="empty-state"><p>Ничего не найдено. Попробуйте ослабить фильтры.</p></div></td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        for (const o of d.offers) {
+            const relColor = o.reliability >= 95 ? 'var(--green)' : o.reliability >= 80 ? 'var(--orange)' : 'var(--red)';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="checkbox" class="mkt-offer-cb" value="${o.id}" onchange="updateMktSelection()"></td>
+                <td style="font-family:monospace;font-size:11px">${o.id}</td>
+                <td style="font-weight:600">${o.gpu}</td>
+                <td>${o.num_gpus}</td>
+                <td>${o.gpu_ram}GB</td>
+                <td style="color:var(--orange);font-weight:700">$${o.dph.toFixed(3)}</td>
+                <td style="font-size:12px">${o.inet_down}/${o.inet_up}</td>
+                <td style="font-size:12px">${o.cpu_cores}c</td>
+                <td style="font-size:12px">${o.cpu_ram}GB</td>
+                <td style="font-size:12px">${o.disk}GB</td>
+                <td style="color:${relColor};font-weight:600">${o.reliability}%</td>
+                <td style="font-size:12px">${o.cuda || '—'}</td>
+                <td style="font-size:11px;color:var(--text-muted);max-width:80px;overflow:hidden;text-overflow:ellipsis" title="${o.location||''}">${(o.location||'—').slice(0,12)}</td>
+                <td><button class="btn btn-primary btn-sm" onclick="rentOffer(${o.id})">Rent</button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+        // Reset selection UI
+        document.getElementById('mktCheckAll').checked = false;
+        updateMktSelection();
+    } catch (e) {
+        document.getElementById('mktBody').innerHTML = `<tr><td colspan="13">Ошибка: ${e}</td></tr>`;
+    }
+}
+
+async function rentOffer(id) {
+    if (!confirm(`Арендовать offer #${id}?`)) return;
+    const fd = new FormData();
+    fd.append('offer_id', id);
+    fd.append('disk_gb', 50);
+    const r = await fetch('/api/instances/rent', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) {
+        showToast(`✓ Арендован: instance ${d.instance_id}`, 'success');
+        switchPage('instances');
+    } else {
+        showToast('✗ ' + d.error, 'error');
+    }
+}
+
+function toggleAllOffers(checked) {
+    document.querySelectorAll('.mkt-offer-cb').forEach(cb => cb.checked = checked);
+    updateMktSelection();
+}
+
+function updateMktSelection() {
+    const checked = document.querySelectorAll('.mkt-offer-cb:checked');
+    const n = checked.length;
+    const selLabel = document.getElementById('mktSelected');
+    const rentBtn = document.getElementById('mktRentBtn');
+    if (n > 0) {
+        selLabel.style.display = '';
+        selLabel.textContent = n + ' выбрано';
+        rentBtn.style.display = '';
+        rentBtn.textContent = `🛒 Арендовать ${n} шт`;
+    } else {
+        selLabel.style.display = 'none';
+        rentBtn.style.display = 'none';
+    }
+}
+
+async function rentSelected() {
+    const ids = [...document.querySelectorAll('.mkt-offer-cb:checked')].map(cb => parseInt(cb.value));
+    if (!ids.length) return;
+    if (!confirm(`Арендовать ${ids.length} машин?`)) return;
+
+    const rentBtn = document.getElementById('mktRentBtn');
+    rentBtn.disabled = true;
+    rentBtn.textContent = '⏳ Арендую...';
+    let ok = 0, fail = 0;
+
+    for (const id of ids) {
+        try {
+            const fd = new FormData();
+            fd.append('offer_id', id);
+            fd.append('disk_gb', 50);
+            const r = await fetch('/api/instances/rent', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (d.ok) {
+                ok++;
+                showToast(`✓ #${id} → instance ${d.instance_id}`, 'success');
+            } else {
+                fail++;
+                showToast(`✗ #${id}: ${d.error}`, 'error');
+            }
+        } catch(e) {
+            fail++;
+        }
+    }
+
+    rentBtn.disabled = false;
+    updateMktSelection();
+    showToast(`Готово: ${ok} арендовано, ${fail} ошибок`, ok > 0 ? 'success' : 'error');
+    if (ok > 0) switchPage('instances');
+}
+
+// ═══ CRACKED ═══
+function downloadCracked() {
+    window.open('/api/cracked/download', '_blank');
+}
+
+function downloadCrackedCsv() {
+    window.open('/api/cracked/csv', '_blank');
+}
+
+function clearLogs() {
+    document.getElementById('fullLog').innerHTML = '';
+    document.getElementById('dashLog').innerHTML = '';
+}
+
+function refreshAll() {
+    pollStatus();
+    if (currentPage === 'instances') loadInstances();
+    if (currentPage === 'results') loadCracked();
+    if (currentPage === 'settings') loadSettings();
+}
+
+// ═══ NOTIFICATIONS ═══
+function showToast(msg, type = 'info') {
+    const toast = document.createElement('div');
+    const borderColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--accent)';
+    const textColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--accent)';
+    toast.style.cssText = `background:var(--bg-3);border:1px solid ${borderColor};border-radius:8px;padding:12px 18px;color:${textColor};font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.5);animation:slideUp 0.3s ease;min-width:200px;`;
+    toast.textContent = msg;
+    document.getElementById('toastContainer').appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+}
+
+function showNotification(msg) {
+    showToast(msg, 'success');
+    // Browser notification
+    if (Notification.permission === 'granted') {
+        new Notification('HashCrack', { body: msg, icon: '⚡' });
+    }
+    // Sound beep
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.type = 'sine'; osc.frequency.value = 880;
+        osc.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.15);
+    } catch(e) {}
+}
+
+// Request notification permission
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
+
+// ═══ SSH KEY ═══
+async function checkSshKey() {
+    try {
+        const r = await fetch('/api/ssh-key/check');
+        const d = await r.json();
+        const warn = document.getElementById('sshKeyWarn');
+        if (!d.has_local) {
+            warn.style.display = '';
+            warn.querySelector('span').textContent = '⚠️ SSH ключ не найден на сервере!';
+        } else if (!d.synced) {
+            warn.style.display = '';
+        } else {
+            warn.style.display = 'none';
+        }
+    } catch(e) {}
+}
+
+async function syncSshKey() {
+    const msg = document.getElementById('sshKeyMsg') || document.getElementById('settSshMsg');
+    if (msg) msg.textContent = 'Синхронизация...';
+    try {
+        const r = await fetch('/api/ssh-key/sync', { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) {
+            if (msg) msg.textContent = '✓ ' + d.status + ' ' + (d.key || '');
+            msg.style.color = 'var(--green)';
+            document.getElementById('sshKeyWarn').style.display = 'none';
+            if (currentPage === 'settings') loadSettings();
+        } else {
+            if (msg) msg.textContent = '✗ ' + d.error;
+            msg.style.color = 'var(--red)';
+        }
+    } catch(e) {
+        if (msg) msg.textContent = '✗ ' + e;
+    }
+}
+
+// ═══ COST ESTIMATOR ═══
+const gpuPrices = {'RTX 5090': 0.38, 'RTX 4090': 0.35, 'RTX 3090': 0.15, 'RTX A6000': 0.25, 'A100_SXM4': 1.2, 'H100_SXM5': 2.5};
+function updateModeDesc() {}
+function updateCostEstimate() {
+    const gpu = document.querySelector('[name=gpu_name]')?.value || 'RTX 5090';
+    const n = parseInt(document.querySelector('[name=num_machines]')?.value || '5');
+    const pricePerGpu = gpuPrices[gpu] || 0.5;
+    const hourly = pricePerGpu * n;
+    const est = document.getElementById('costEstimate');
+    if (est) {
+        est.style.display = '';
+        document.getElementById('estCostHr').textContent = `~$${hourly.toFixed(2)}/hr`;
+        document.getElementById('estCost1h').textContent = `1hr: $${hourly.toFixed(2)}`;
+        document.getElementById('estCost4h').textContent = `4hr: $${(hourly*4).toFixed(2)}`;
+        document.getElementById('estCost24h').textContent = `24hr: $${(hourly*24).toFixed(2)}`;
+    }
+}
+document.querySelector('[name=gpu_name]')?.addEventListener('change', updateCostEstimate);
+document.querySelector('[name=num_machines]')?.addEventListener('input', updateCostEstimate);
+setTimeout(updateCostEstimate, 500);
+
+// ═══ SETTINGS PAGE ═══
+async function loadSettings() {
+    // SSH key status
+    try {
+        const r = await fetch('/api/ssh-key/check');
+        const d = await r.json();
+        const el = document.getElementById('sshKeyStatus');
+        if (!d.has_local) {
+            el.innerHTML = '<span style="color:var(--red)">❌ SSH ключ не найден</span><br><span style="font-size:12px;color:var(--text-muted)">Сгенерируйте: ssh-keygen -t ed25519</span>';
+        } else if (d.synced) {
+            el.innerHTML = `<span style="color:var(--green)">✓ Синхронизирован</span><br><span style="font-size:11px;color:var(--text-muted)">${d.local_key_short}</span>`;
+        } else {
+            el.innerHTML = `<span style="color:var(--orange)">⚠️ Не синхронизирован с Vast.ai</span><br><span style="font-size:11px;color:var(--text-muted)">${d.key_file}: ${d.local_key_short}</span>`;
+        }
+    } catch(e) {
+        document.getElementById('sshKeyStatus').innerHTML = `<span style="color:var(--red)">Ошибка: ${e}</span>`;
+    }
+    // Account info
+    try {
+        const r = await fetch('/api/account');
+        const d = await r.json();
+        const el = document.getElementById('accountInfo');
+        if (d.error) {
+            el.innerHTML = `<span style="color:var(--red)">${d.error}</span>`;
+        } else {
+            el.innerHTML = `
+                <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:13px">
+                    <span style="color:var(--text-muted)">Email:</span><span>${d.email || '—'}</span>
+                    <span style="color:var(--text-muted)">Username:</span><span>${d.username || '—'}</span>
+                    <span style="color:var(--text-muted)">Баланс:</span><span style="color:var(--green);font-weight:700">$${d.credit}</span>
+                    <span style="color:var(--text-muted)">SSH ключ:</span><span style="font-size:11px;word-break:break-all;color:var(--text-dim)">${(d.ssh_key || '—').slice(0, 120)}...</span>
+                </div>`;
+        }
+    } catch(e) {}
+}
+
+// ═══ HISTORY ═══
+async function loadHistory() {
+    try {
+        const r = await fetch('/api/history');
+        const d = await r.json();
+        const tbody = document.getElementById('historyBody');
+        if (!d.history || d.history.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="icon">📜</div><p>Нет завершённых задач</p></div></td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        for (const h of d.history.reverse()) {
+            const pct = h.total_hashes ? ((h.total_cracked / h.total_hashes) * 100).toFixed(1) : '0';
+            const elapsed = h.elapsed_sec || 0;
+            const timeStr = elapsed >= 3600 ? `${Math.floor(elapsed/3600)}h ${Math.floor((elapsed%3600)/60)}m` : `${Math.floor(elapsed/60)}m ${elapsed%60}s`;
+            const atkMode = h.attack_mode === 3 ? 'Mask' : 'Dict';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-size:11px;white-space:nowrap">${(h.finished_at || '').slice(0, 16)}</td>
+                <td>${fmt(h.total_hashes)}</td>
+                <td style="color:var(--green);font-weight:600">${fmt(h.total_cracked)}</td>
+                <td style="color:${parseFloat(pct) > 50 ? 'var(--green)' : 'var(--orange)'}">${pct}%</td>
+                <td>${timeStr}</td>
+                <td style="color:var(--orange)">$${(h.total_cost || 0).toFixed(2)}</td>
+                <td>${h.num_machines || '?'}</td>
+                <td>${h.gpu || '?'}</td>
+                <td><span class="badge-s badge-done">${atkMode} m${h.hashcat_mode}</span></td>
+            `;
+            tbody.appendChild(tr);
+        }
+    } catch(e) {
+        document.getElementById('historyBody').innerHTML = `<tr><td colspan="9" style="color:var(--red)">Ошибка: ${e}</td></tr>`;
+    }
+}
+
+// ═══ FILE UPLOAD (DRAG & DROP) ═══
+const dropZone = document.getElementById('dropZone');
+if (dropZone) {
+    ['dragenter', 'dragover'].forEach(evt => dropZone.addEventListener(evt, e => {
+        e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag-over');
+    }));
+    ['dragleave', 'drop'].forEach(evt => dropZone.addEventListener(evt, e => {
+        e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over');
+    }));
+    dropZone.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
+        if (files.length) handleFileSelect(files);
+    });
+}
+
+async function handleFileSelect(files) {
+    const listEl = document.getElementById('uploadedFiles');
+    for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const isArchive = /\.(zip|tar\.gz|tgz|7z|rar)$/i.test(file.name);
+        const isRules = /\.(rule|rules)$/i.test(file.name);
+        const typeIcon = isArchive ? '📦' : isRules ? '📐' : '📄';
+        const typeLabel = isArchive ? 'Архив' : isRules ? 'Правила' : 'Хэши';
+        listEl.innerHTML += `<div id="upl_${file.name.replace(/\W/g,'_')}">${typeIcon} ⏳ ${typeLabel}: ${file.name}...</div>`;
+        try {
+            const r = await fetch('/api/upload', { method: 'POST', body: fd });
+            const d = await r.json();
+            const elId = `upl_${file.name.replace(/\W/g,'_')}`;
+            const el = document.getElementById(elId);
+            if (d.ok) {
+                if (el) el.innerHTML = `${typeIcon} ✓ ${d.name} (${fmtSize(d.size)}) — ${typeLabel}`;
+                showToast(`✓ ${typeLabel}: ${d.name}`, 'success');
+                // Refresh file lists & auto-select uploaded file
+                await loadFiles();
+                const selMap = { archive: 'selArchive', hashes: 'selHashes', rules: 'selRules' };
+                const selId = selMap[d.type] || 'selHashes';
+                const sel = document.getElementById(selId);
+                for (let i = 0; i < sel.options.length; i++) {
+                    if (sel.options[i].text.includes(d.name)) { sel.selectedIndex = i; break; }
+                }
+            } else {
+                if (el) el.innerHTML = `❌ ${file.name}: ${d.error}`;
+                showToast(`✗ ${file.name}: ${d.error}`, 'error');
+            }
+        } catch (e) {
+            showToast(`✗ Ошибка: ${e}`, 'error');
+        }
+    }
+}
+
+// ═══ SEARCH CRACKED ═══
+let _allCrackedLines = [];
+
+async function loadCracked() {
+    try {
+        const r = await fetch('/api/cracked');
+        const d = await r.json();
+        _allCrackedLines = d.lines || [];
+        renderCrackedList(_allCrackedLines);
+    } catch (e) { console.error(e); }
+}
+
+function filterCracked() {
+    const q = (document.getElementById('crackedSearch').value || '').toLowerCase();
+    if (!q) return renderCrackedList(_allCrackedLines);
+    const filtered = _allCrackedLines.filter(l => l.toLowerCase().includes(q));
+    renderCrackedList(filtered);
+}
+
+function renderCrackedList(lines) {
+    const list = document.getElementById('crackedList');
+    if (!lines.length) {
+        list.innerHTML = '<div class="empty-state"><div class="icon">🔒</div><p>Пока ничего не взломано</p></div>';
+        return;
+    }
+    list.innerHTML = '';
+    for (const line of lines) {
+        // Format is now email:pass from the API
+        const idx = line.indexOf(':');
+        const div = document.createElement('div');
+        div.className = 'cracked-item';
+        if (idx > 0) {
+            const email = line.substring(0, idx);
+            const pass = line.substring(idx + 1);
+            div.innerHTML = `<span class="cracked-user">${escHtml(email)}</span><span class="cracked-pass">${escHtml(pass)}</span>`;
+        } else {
+            div.innerHTML = `<span class="cracked-hash">${escHtml(line)}</span>`;
+        }
+        list.appendChild(div);
+    }
+}
+
+function downloadUncracked() {
+    window.open('/api/uncracked', '_blank');
+}
+
+function downloadLogs() {
+    window.open('/api/logs/download', '_blank');
+}
+
+// ═══ CHARTS ═══
+let speedChart = null;
+let crackedChart = null;
+
+function initCharts() {
+    if (speedChart) return; // already initialized
+    if (typeof Chart === 'undefined') return; // Chart.js not loaded yet
+    const chartDefaults = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        scales: {
+            x: { display: true, grid: { color: 'rgba(37,37,64,0.5)' }, ticks: { color: '#6a6a8a', font: { size: 10 }, maxTicksLimit: 8 } },
+            y: { display: true, grid: { color: 'rgba(37,37,64,0.5)' }, ticks: { color: '#6a6a8a', font: { size: 10 } }, beginAtZero: true }
+        },
+        plugins: { legend: { display: false } },
+    };
+    const speedCtx = document.getElementById('speedChart');
+    const crackedCtx = document.getElementById('crackedChart');
+    if (!speedCtx || !crackedCtx) return;
+    speedChart = new Chart(speedCtx, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Скорость (H/s)', data: [], borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.1)', fill: true, tension: 0.3, pointRadius: 0 }] },
+        options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, title: { display: true, text: 'Скорость (H/s)', color: '#d4d4e8', font: { size: 12 } } } }
+    });
+    crackedChart = new Chart(crackedCtx, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Взломано', data: [], borderColor: '#50fa7b', backgroundColor: 'rgba(80,250,123,0.1)', fill: true, tension: 0.3, pointRadius: 0 }] },
+        options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, title: { display: true, text: 'Взломано', color: '#d4d4e8', font: { size: 12 } } } }
+    });
+}
+
+function updateCharts(d) {
+    const panel = document.getElementById('chartPanel');
+    const history = d.chart_history || [];
+    if (history.length < 2) {
+        if (!d.active) panel.style.display = 'none';
+        return;
+    }
+    panel.style.display = '';
+    initCharts();
+    if (!speedChart) return;
+    const labels = history.map(h => {
+        const dt = new Date(h.ts * 1000);
+        return dt.getHours().toString().padStart(2,'0') + ':' + dt.getMinutes().toString().padStart(2,'0');
+    });
+    const speeds = history.map(h => h.speed);
+    const cracked = history.map(h => h.cracked);
+    speedChart.data.labels = labels;
+    speedChart.data.datasets[0].data = speeds;
+    speedChart.update('none');
+    crackedChart.data.labels = labels;
+    crackedChart.data.datasets[0].data = cracked;
+    crackedChart.update('none');
+}
+
+function fmtSpeed(hs) {
+    if (hs >= 1e12) return (hs/1e12).toFixed(1) + ' TH/s';
+    if (hs >= 1e9) return (hs/1e9).toFixed(1) + ' GH/s';
+    if (hs >= 1e6) return (hs/1e6).toFixed(1) + ' MH/s';
+    if (hs >= 1e3) return (hs/1e3).toFixed(1) + ' kH/s';
+    return hs + ' H/s';
+}
+
+// ═══ PASTE HASHES ═══
+function togglePasteHashes() {
+    const el = document.getElementById('fldPasteHashes');
+    el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+async function savePastedHashes() {
+    const text = document.getElementById('txtPasteHashes').value.trim();
+    if (!text) return;
+    const msg = document.getElementById('pasteHashMsg');
+    msg.textContent = 'Сохранение...';
+    try {
+        const r = await fetch('/api/paste-hashes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hashes: text }),
+        });
+        const d = await r.json();
+        if (d.ok) {
+            msg.textContent = `✓ ${d.count} хэшей → ${d.filename}`;
+            msg.style.color = 'var(--green)';
+            loadFiles();
+            // Auto-select the new file
+            setTimeout(() => {
+                const sel = document.getElementById('selHashes');
+                for (const opt of sel.options) {
+                    if (opt.value === d.path) { opt.selected = true; break; }
+                }
+            }, 500);
+        } else {
+            msg.textContent = '✗ ' + d.error;
+            msg.style.color = 'var(--red)';
+        }
+    } catch(e) {
+        msg.textContent = '✗ ' + e;
+        msg.style.color = 'var(--red)';
+    }
+}
+
+// ═══ AUTO-DETECT HASH MODE ═══
+async function detectHashMode() {
+    const sel = document.getElementById('selHashes');
+    const path = sel.value;
+    if (!path) { showToast('Сначала выберите файл хэшей', 'error'); return; }
+    const hint = document.getElementById('detectedModeHint');
+    hint.style.display = '';
+    hint.textContent = '🔄 определяю...';
+    try {
+        const r = await fetch('/api/detect-hash-mode?path=' + encodeURIComponent(path));
+        const d = await r.json();
+        if (d.modes && d.modes.length > 0) {
+            const best = d.modes[0];
+            document.getElementById('selHashMode').value = best.mode;
+            hint.textContent = `✓ ${best.name} (m${best.mode})`;
+            hint.style.color = 'var(--green)';
+            showToast(`Определён режим: ${best.name} (m${best.mode})`, 'success');
+        } else {
+            hint.textContent = '? не удалось определить';
+            hint.style.color = 'var(--orange)';
+        }
+    } catch(e) {
+        hint.textContent = '✗ ' + e;
+        hint.style.color = 'var(--red)';
+    }
+}
+
+// ═══ JOB QUEUE ═══
+let _jobQueue = JSON.parse(localStorage.getItem('hc_job_queue') || '[]');
+
+function renderQueue() {
+    const panel = document.getElementById('queuePanel');
+    const list = document.getElementById('queueList');
+    const btn = document.getElementById('btnAddQueue');
+    if (_jobQueue.length === 0) {
+        panel.style.display = 'none';
+        btn.style.display = '';
+        return;
+    }
+    panel.style.display = '';
+    btn.style.display = '';
+    list.innerHTML = _jobQueue.map((q, i) =>
+        `<div style="padding:4px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--accent)">#${i+1}</span>
+            ${q.attack_mode == 3 ? '🎭 Mask' : '📖 Dict'} •
+            m${q.hashcat_mode} •
+            ${q.hashes_path?.split('/').pop() || '?'} •
+            ${q.num_machines || '?'} машин
+            <button class="btn btn-ghost" style="font-size:10px;padding:1px 6px;margin-left:6px" onclick="removeFromQueue(${i})">✕</button>
+        </div>`
+    ).join('');
+}
+
+function addToQueue() {
+    const form = document.getElementById('startForm');
+    const fd = new FormData(form);
+    // Sync mask
+    if (attackMode === 3) {
+        fd.set('mask', document.getElementById('inpMask').value);
+    } else {
+        fd.set('mask', document.getElementById('inpMaskCombo').value);
+    }
+    const entry = {};
+    for (const [k, v] of fd.entries()) entry[k] = v;
+    _jobQueue.push(entry);
+    localStorage.setItem('hc_job_queue', JSON.stringify(_jobQueue));
+    renderQueue();
+    showToast('📋 Задача добавлена в очередь', 'info');
+}
+
+function removeFromQueue(i) {
+    _jobQueue.splice(i, 1);
+    localStorage.setItem('hc_job_queue', JSON.stringify(_jobQueue));
+    renderQueue();
+}
+
+function clearQueue() {
+    _jobQueue = [];
+    localStorage.setItem('hc_job_queue', '[]');
+    renderQueue();
+}
+
+async function processQueue() {
+    if (_jobQueue.length === 0) return;
+    const next = _jobQueue.shift();
+    localStorage.setItem('hc_job_queue', JSON.stringify(_jobQueue));
+    renderQueue();
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(next)) fd.append(k, v);
+    try {
+        const r = await fetch('/api/start', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (r.ok) {
+            showToast(`📋 Очередь: запущена задача (${d.total_hashes} хэшей)`, 'success');
+            switchPage('dashboard');
+        } else {
+            showToast('✗ Очередь: ' + (d.detail || JSON.stringify(d)), 'error');
+        }
+    } catch(e) {
+        showToast('✗ Очередь: ' + e, 'error');
+    }
+}
+
+// ═══ JOB CONFIG PRESETS ═══
+function savePreset() {
+    const name = prompt('Название пресета:');
+    if (!name) return;
+    const form = document.getElementById('startForm');
+    const fd = new FormData(form);
+    if (attackMode === 3) fd.set('mask', document.getElementById('inpMask').value);
+    else fd.set('mask', document.getElementById('inpMaskCombo').value);
+    const entry = { name };
+    for (const [k, v] of fd.entries()) entry[k] = v;
+    entry._attackMode = attackMode;
+    entry._jobMode = jobMode;
+    const presets = JSON.parse(localStorage.getItem('hc_presets') || '[]');
+    presets.push(entry);
+    localStorage.setItem('hc_presets', JSON.stringify(presets));
+    showToast(`💾 Пресет «${name}» сохранён`, 'success');
+}
+
+function loadPresetMenu() {
+    const presets = JSON.parse(localStorage.getItem('hc_presets') || '[]');
+    if (presets.length === 0) { showToast('Нет сохранённых пресетов', 'info'); return; }
+    const names = presets.map((p, i) => `${i+1}. ${p.name}`).join('\n');
+    const choice = prompt('Выберите пресет (номер):\n' + names);
+    if (!choice) return;
+    const idx = parseInt(choice) - 1;
+    if (idx < 0 || idx >= presets.length) { showToast('Неверный номер', 'error'); return; }
+    applyPreset(presets[idx]);
+}
+
+function applyPreset(p) {
+    if (p._attackMode !== undefined) setAttackMode(parseInt(p._attackMode));
+    if (p._jobMode) setJobMode(p._jobMode);
+    const fields = {
+        'archive_path': 'selArchive', 'wordlist_url': 'inpWordlistUrl', 'rules_url': 'inpRulesUrl',
+        'rules_path': 'selRules', 'archive_url': 'inpArchiveUrl',
+        'num_machines': null, 'gpu_name': null, 'hashcat_mode': 'selHashMode',
+        'auto_destroy': 'selAutoDestroy', 'budget_limit': 'inpBudget', 'extra_args': 'inpExtraArgs',
+    };
+    for (const [name, id] of Object.entries(fields)) {
+        const val = p[name];
+        if (val === undefined) continue;
+        const el = id ? document.getElementById(id) : document.querySelector(`[name="${name}"]`);
+        if (el) el.value = val;
+    }
+    if (p.mask) {
+        if (parseInt(p._attackMode) === 3) document.getElementById('inpMask').value = p.mask;
+        else document.getElementById('inpMaskCombo').value = p.mask;
+    }
+    showToast(`📂 Пресет «${p.name}» загружен`, 'success');
+}
+
+// ═══ WEBSOCKET LIVE UPDATES ═══
+let _ws = null;
+let _wsReconnectTimer = null;
+
+function connectWebSocket() {
+    if (_ws && _ws.readyState <= 1) return; // already connected/connecting
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${proto}//${location.host}/ws`;
+    try {
+        _ws = new WebSocket(url);
+        _ws.onopen = () => { console.log('WS connected'); };
+        _ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'full_status') {
+                    // Full status push from monitor loop — update everything
+                    document.getElementById('dCracked').textContent = fmt(msg.total_cracked);
+                    document.getElementById('dCrackedPct').textContent = msg.total_hashes ? ((msg.total_cracked / msg.total_hashes) * 100).toFixed(1) + '%' : '—';
+                    document.getElementById('dSpeed').textContent = msg.total_speed || '—';
+                    document.getElementById('dCost').textContent = '$' + (msg.total_cost || 0).toFixed(2);
+                    if (msg.phase) {
+                        const pill = document.getElementById('phasePill');
+                        pill.textContent = phaseMap[msg.phase] || msg.phase;
+                        pill.className = 'phase-pill ' + msg.phase;
+                        document.getElementById('dPhase').textContent = phaseMap[msg.phase] || msg.phase;
+                    }
+                    // Update machines table
+                    if (msg.machines && msg.machines.length > 0) {
+                        document.getElementById('dMachines').textContent = msg.machines.length;
+                        const tbody = document.getElementById('dashMachinesBody');
+                        if (tbody) {
+                            tbody.innerHTML = '';
+                            for (const m of msg.machines) {
+                                const pct = (m.progress||0).toFixed(1);
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `<td style="font-family:monospace;font-size:12px">${m.id}</td><td>${m.gpu}${m.num_gpus > 1 ? ' ×'+m.num_gpus : ''}</td><td><span class="badge-s ${badgeClass(m.status)}">${m.status}</span></td><td><div style="display:flex;align-items:center;gap:8px"><div class="pbar" style="width:90px"><div class="pbar-fill" style="width:${pct}%"></div></div><span style="font-size:11px;color:var(--text-dim)">${pct}%</span></div></td><td style="font-size:12px;color:var(--text-dim)">${m.speed || '—'}</td><td style="color:var(--green);font-weight:600">${m.cracked || 0}</td><td style="font-size:12px;color:var(--text-dim)">${m.eta || '—'}</td><td style="color:var(--orange)">$${(m.dph||0).toFixed(2)}</td><td style="font-size:11px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(m.log||'')}">${escHtml(m.log||'—')}</td>`;
+                                tbody.appendChild(tr);
+                            }
+                        }
+                    }
+                    // Update charts
+                    if (msg.chart_history) {
+                        updateCharts({chart_history: msg.chart_history, active: true});
+                    }
+                    // GPU panel
+                    if (msg.gpu_stats && msg.gpu_stats.length > 0) {
+                        const gpuBody = document.getElementById('gpuCards');
+                        if (gpuBody) {
+                            gpuBody.innerHTML = '';
+                            for (const machine of msg.gpu_stats) {
+                                for (const g of machine.gpus) {
+                                    const card = document.createElement('div');
+                                    card.className = 'gpu-card';
+                                    const tempClass = g.temp >= 85 ? 'hot' : g.temp >= 70 ? 'warm' : 'cool';
+                                    card.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">GPU ${g.index} • ID ${machine.id}</div><div class="gpu-bar"><span class="gpu-temp ${tempClass}">${g.temp}°C</span><div class="gpu-util-bar"><div class="gpu-util-fill" style="width:${g.util}%;background:${g.util>80?'var(--success)':g.util>50?'var(--orange)':'var(--danger)'}"></div></div><span style="color:var(--text-dim)">${g.util}%</span><span style="color:var(--text-muted);font-size:10px">${g.mem_used}/${g.mem_total}MB</span></div>`;
+                                    gpuBody.appendChild(card);
+                                }
+                            }
+                            document.getElementById('gpuPanel').style.display = '';
+                        }
+                    }
+                } else if (msg.type === 'status') {
+                    // Light update from WS — update minimal UI
+                    if (msg.cracked !== undefined) {
+                        document.getElementById('dCracked').textContent = fmt(msg.cracked);
+                    }
+                    if (msg.phase) {
+                        const pill = document.getElementById('phasePill');
+                        pill.textContent = phaseMap[msg.phase] || msg.phase;
+                        pill.className = 'phase-pill ' + msg.phase;
+                    }
+                    if (msg.speed) {
+                        document.getElementById('dSpeed').textContent = msg.speed;
+                    }
+                } else if (msg.type === 'log') {
+                    // Update logTs so polling doesn't duplicate this entry
+                    if (msg.ts && msg.ts > logTs) logTs = msg.ts;
+                    const dashLog = document.getElementById('dashLog');
+                    const fullLog = document.getElementById('fullLog');
+                    const div = document.createElement('div');
+                    div.className = 'log-entry ' + (msg.level || 'info');
+                    div.innerHTML = `<span class="log-time">${msg.time || ''}</span><span class="log-msg">${escHtml(msg.msg || '')}</span>`;
+                    dashLog.appendChild(div);
+                    fullLog.appendChild(div.cloneNode(true));
+                    dashLog.scrollTop = dashLog.scrollHeight;
+                    while (dashLog.children.length > 50) dashLog.removeChild(dashLog.firstChild);
+                } else if (msg.type === 'queue_done') {
+                    // Job finished — check the queue for next task
+                    setTimeout(processQueue, 3000);
+                }
+            } catch(err) { console.error('WS parse error:', err); }
+        };
+        _ws.onclose = () => {
+            console.log('WS disconnected, reconnecting in 5s...');
+            _wsReconnectTimer = setTimeout(connectWebSocket, 5000);
+        };
+        _ws.onerror = () => {};
+    } catch(e) {
+        console.error('WS error:', e);
+        _wsReconnectTimer = setTimeout(connectWebSocket, 10000);
+    }
+}
+
+// ═══ KEYBOARD SHORTCUTS ═══
+document.addEventListener('keydown', (e) => {
+    // Don't trigger shortcuts when typing in inputs/textareas
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.ctrlKey || e.metaKey) return;
+
+    switch(e.key) {
+        case '1': switchPage('dashboard'); break;
+        case '2': switchPage('job'); break;
+        case '3': switchPage('results'); break;
+        case '4': switchPage('files'); break;
+        case '5': switchPage('instances'); break;
+        case '6': switchPage('marketplace'); break;
+        case '7': switchPage('logs'); break;
+        case '8': switchPage('history'); break;
+        case '9': switchPage('settings'); break;
+        case 'r': case 'R': case 'к': case 'К': refreshAll(); break;
+        case '?':
+            showToast('⌨ 1-8: страницы • R: обновить • S: стоп • P: пауза', 'info');
+            break;
+        case 's': case 'S': case 'ы': case 'Ы':
+            if (document.getElementById('btnStopTop').style.display !== 'none') stopJob();
+            break;
+        case 'p': case 'P': case 'з': case 'З':
+            if (document.getElementById('btnPauseTop').style.display !== 'none') pauseJob();
+            else if (document.getElementById('btnResumeTop').style.display !== 'none') resumeJob();
+            break;
+    }
+});
+
+// ═══ FILE MANAGER ═══
+let _fmFiles = [];
+let _fmFilter = 'all';
+let _fmSortKey = 'modified';
+let _fmSortDir = -1; // -1 = desc
+let _fmSelected = new Set();
+
+// Drag & drop for FM
+const fmDZ = document.getElementById('fmDropZone');
+if (fmDZ) {
+    ['dragenter','dragover'].forEach(e => fmDZ.addEventListener(e, ev => { ev.preventDefault(); ev.stopPropagation(); fmDZ.classList.add('drag-over'); }));
+    ['dragleave','drop'].forEach(e => fmDZ.addEventListener(e, ev => { ev.preventDefault(); ev.stopPropagation(); fmDZ.classList.remove('drag-over'); }));
+    fmDZ.addEventListener('drop', ev => { if (ev.dataTransfer.files.length) fmUploadFiles(ev.dataTransfer.files); });
+}
+
+async function loadFileManager() {
+    try {
+        const r = await fetch('/api/files/all');
+        const d = await r.json();
+        _fmFiles = d.files || [];
+        document.getElementById('fmTotalSize').textContent = `${d.count} файлов • ${fmtSize(d.total_size)}`;
+        _fmSelected.clear();
+        fmRenderList();
+    } catch(e) {
+        document.getElementById('fmBody').innerHTML = `<tr><td colspan="7" style="color:var(--red)">Ошибка: ${e}</td></tr>`;
+    }
+}
+
+function fmSetFilter(f) {
+    _fmFilter = f;
+    document.querySelectorAll('.fm-filter').forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === f);
+        b.classList.toggle('btn-ghost', b.dataset.filter !== f);
+    });
+    fmRenderList();
+}
+
+function fmSort(key) {
+    if (_fmSortKey === key) _fmSortDir *= -1;
+    else { _fmSortKey = key; _fmSortDir = key === 'name' ? 1 : -1; }
+    fmRenderList();
+}
+
+function fmRenderList() {
+    const tbody = document.getElementById('fmBody');
+    const search = (document.getElementById('fmSearch')?.value || '').toLowerCase();
+    let list = _fmFiles.filter(f => {
+        if (_fmFilter !== 'all' && f.type !== _fmFilter) return false;
+        if (search && !f.name.toLowerCase().includes(search)) return false;
+        return true;
+    });
+    list.sort((a,b) => {
+        let av = a[_fmSortKey], bv = b[_fmSortKey];
+        if (typeof av === 'string') return av.localeCompare(bv) * _fmSortDir;
+        return (av - bv) * _fmSortDir;
+    });
+    document.getElementById('fmCount').textContent = `${list.length} файлов`;
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="icon">📁</div><p>Нет файлов</p></div></td></tr>';
+        return;
+    }
+    const icons = { hashes: '📄', archive: '📦', rules: '📐', other: '📎' };
+    const labels = { hashes: 'Хэши', archive: 'Архив', rules: 'Правила', other: 'Файл' };
+    tbody.innerHTML = list.map(f => {
+        const sel = _fmSelected.has(f.path) ? 'selected' : '';
+        const chk = _fmSelected.has(f.path) ? 'checked' : '';
+        const date = new Date(f.modified * 1000);
+        const dateStr = date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+        return `<tr class="fm-row ${sel}">
+            <td><input type="checkbox" ${chk} onchange="fmToggle('${f.path.replace(/'/g,"\\'")}')"></td>
+            <td><span class="fm-type-icon" title="${labels[f.type]}">${icons[f.type]||'📎'}</span></td>
+            <td>
+                <div class="fm-name" id="fn_${btoa(f.path).replace(/[^a-zA-Z0-9]/g,'_')}">${escHtml(f.name)}</div>
+            </td>
+            <td style="font-size:12px;color:var(--text-dim);white-space:nowrap">${fmtSize(f.size)}</td>
+            <td style="font-size:12px;color:var(--text-dim)">${f.lines ? fmt(f.lines) : '—'}</td>
+            <td style="font-size:11px;color:var(--text-dim);white-space:nowrap">${dateStr}</td>
+            <td>
+                <div style="display:flex;gap:4px">
+                    <button class="btn btn-ghost btn-sm" onclick="fmRename('${f.path.replace(/'/g,"\\'")}','${f.name.replace(/'/g,"\\'")}')" title="Переименовать">✏️</button>
+                    <button class="btn btn-ghost btn-sm" onclick="fmUseAs('${f.path.replace(/'/g,"\\'")}','${f.type}')" title="Выбрать для задачи" style="${f.type==='other'?'display:none':''}">📌</button>
+                    <button class="btn btn-danger btn-sm" onclick="fmDelete('${f.path.replace(/'/g,"\\'")}','${f.name.replace(/'/g,"\\'")}')" title="Удалить">✕</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+    fmUpdateBatch();
+}
+
+function escHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function fmToggle(path) {
+    if (_fmSelected.has(path)) _fmSelected.delete(path);
+    else _fmSelected.add(path);
+    fmRenderList();
+}
+
+function fmToggleAll(checked) {
+    const search = (document.getElementById('fmSearch')?.value || '').toLowerCase();
+    _fmFiles.forEach(f => {
+        if (_fmFilter !== 'all' && f.type !== _fmFilter) return;
+        if (search && !f.name.toLowerCase().includes(search)) return;
+        if (checked) _fmSelected.add(f.path); else _fmSelected.delete(f.path);
+    });
+    fmRenderList();
+}
+
+function fmUpdateBatch() {
+    const el = document.getElementById('fmBatchActions');
+    const cnt = document.getElementById('fmSelectedCount');
+    if (_fmSelected.size > 0) {
+        el.style.display = 'flex';
+        cnt.textContent = _fmSelected.size;
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+async function fmUploadFiles(files) {
+    const prog = document.getElementById('fmUploadProgress');
+    for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        prog.innerHTML = `<div style="font-size:12px;color:var(--accent)">⏳ ${file.name}...</div>`;
+        try {
+            const r = await fetch('/api/upload', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (d.ok) {
+                prog.innerHTML = `<div style="font-size:12px;color:var(--green)">✓ ${d.name} (${fmtSize(d.size)})</div>`;
+                showToast(`✓ Загружено: ${d.name}`, 'success');
+            } else {
+                prog.innerHTML = `<div style="font-size:12px;color:var(--red)">✗ ${file.name}: ${d.error}</div>`;
+            }
+        } catch(e) {
+            prog.innerHTML = `<div style="font-size:12px;color:var(--red)">✗ ${e}</div>`;
+        }
+    }
+    // Refresh lists
+    await loadFileManager();
+    loadFiles();
+    setTimeout(() => { prog.innerHTML = ''; }, 3000);
+}
+
+async function fmDelete(path, name) {
+    if (!confirm(`Удалить ${name}?`)) return;
+    try {
+        const r = await fetch('/api/files', { method: 'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({path}) });
+        const d = await r.json();
+        if (d.ok) { showToast(`🗑 ${name} удалён`, 'success'); loadFileManager(); loadFiles(); }
+        else showToast(`Ошибка: ${d.error || d.detail}`, 'error');
+    } catch(e) { showToast(`Ошибка: ${e}`, 'error'); }
+}
+
+async function fmDeleteSelected() {
+    if (!_fmSelected.size) return;
+    if (!confirm(`Удалить ${_fmSelected.size} файлов?`)) return;
+    let ok = 0, fail = 0;
+    for (const path of _fmSelected) {
+        try {
+            const r = await fetch('/api/files', { method: 'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({path}) });
+            const d = await r.json();
+            if (d.ok) ok++; else fail++;
+        } catch(e) { fail++; }
+    }
+    _fmSelected.clear();
+    showToast(`Удалено: ${ok}${fail ? ', ошибок: '+fail : ''}`, ok ? 'success' : 'error');
+    loadFileManager();
+    loadFiles();
+}
+
+async function fmRename(path, oldName) {
+    const newName = prompt('Новое имя файла:', oldName);
+    if (!newName || newName === oldName) return;
+    try {
+        const r = await fetch('/api/files/rename', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({path, new_name:newName}) });
+        const d = await r.json();
+        if (d.ok) { showToast(`✏️ ${oldName} → ${d.new_name}`, 'success'); loadFileManager(); loadFiles(); }
+        else showToast(`Ошибка: ${d.error || d.detail}`, 'error');
+    } catch(e) { showToast(`Ошибка: ${e}`, 'error'); }
+}
+
+function fmUseAs(path, type) {
+    switchPage('job');
+    setTimeout(() => {
+        const selMap = { archive: 'selArchive', hashes: 'selHashes', rules: 'selRules' };
+        const labelMap = { archive: 'Архив', hashes: 'Хэши', rules: 'Правила' };
+        const selId = selMap[type] || 'selHashes';
+        const sel = document.getElementById(selId);
+        // Find option by path
+        for (let i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === path) { sel.selectedIndex = i; break; }
+        }
+        showToast(`📌 Файл выбран в "${labelMap[type] || type}"`, 'info');
+    }, 200);
+}
+
+// ═══ INIT ═══
+loadFiles();
+startPolling();
+checkSshKey();
+connectWebSocket();
+renderQueue();
+if (currentPage === 'settings') loadSettings();
+</script>
+</body>
+</html>
